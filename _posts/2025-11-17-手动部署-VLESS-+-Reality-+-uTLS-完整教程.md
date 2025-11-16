@@ -21,7 +21,7 @@ tags: [VPN, VPS, VLESS, Reality, uTLS, Sing-box]
 
 
 
-# **第一步：安装 Sing-box（官方安装脚本）**
+## **第一步：安装 Sing-box（官方安装脚本）**
 
 
 
@@ -54,7 +54,7 @@ systemctl status sing-box
 
 
 
-# **第二步：生成所需密钥和 UUID**
+## **第二步：生成所需密钥和 UUID**
 
 
 
@@ -62,7 +62,7 @@ Sing-box 自带工具，我们来生成 Reality 密钥对、Short ID 和 UUID。
 
 
 
-## 1. 生成 Reality 密钥对：
+### 1. 生成 Reality 密钥对：
 
 ```bash
 sing-box generate reality-key
@@ -77,7 +77,7 @@ Public key:  YYYYYYYYYYYYYYYYYYYY
 
 
 
-## 2. 生成 short_id：
+### 2. 生成 short_id：
 
 ```bash
 sing-box generate reality-short-id
@@ -93,7 +93,7 @@ abcd1234
 
 
 
-## 3. 生成 UUID：
+### 3. 生成 UUID：
 
 ```bash
 sing-box generate uuid
@@ -109,7 +109,7 @@ zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz
 
 
 
-# **第三步：编写 Sing-box 服务端配置**
+## **第三步：编写 Sing-box 服务端配置**
 
 
 
@@ -163,7 +163,7 @@ JSON内容（请使用 **第二步** 生成的值替换“替换为...”部分�
 
 
 
-## **关键说明（非常重要）**
+### **关键说明（非常重要）**
 
 
 
@@ -193,7 +193,7 @@ Reality 不需要证书，不需要域名解析，不需要 `allowInsecure`。
 
 
 
-# **第四步：启动 Sing-box 服务**
+## **第四步：启动 Sing-box 服务**
 
 
 
@@ -221,7 +221,7 @@ systemctl status sing-box
 
 
 
-# **第五步：服务器防火墙放行 443**
+## **第五步：服务器防火墙放行 443**
 
 
 
@@ -237,7 +237,7 @@ Reality 必须使用 TCP（真实流量就是 HTTPS）。
 
 
 
-# **第六步：Shadowrocket 客户端配置**
+## **第六步：Shadowrocket 客户端配置**
 
 
 
@@ -266,11 +266,11 @@ Reality 必须使用 TCP（真实流量就是 HTTPS）。
 
 
 
-# 🧪 **第七步：测试是否正常运行**
+## **第七步：测试是否正常运行**
 
 
 
-## 1. 连接 Shadowrocket
+### 1. 连接 Shadowrocket
 
 查看是否显示：
 
@@ -280,13 +280,13 @@ Connected
 
 
 
-## 2. 测试 IP
+### 2. 测试 IP
 
 访问 `https://chat.openai.com` 或 `https://www.youtube.com`。
 
 
 
-## 3. 测试现实功能
+### 3. 测试现实功能
 
 在 Shadowrocket 查看 Log：
 
