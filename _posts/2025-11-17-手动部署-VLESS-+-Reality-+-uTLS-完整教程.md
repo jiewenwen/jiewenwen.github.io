@@ -1,7 +1,7 @@
 ---
 title: 手动部署 VLESS + Reality + uTLS 完整教程
 date: 2025-11-17 00:12:00 +0800
-categories: [技术]
+categories: [VPN]
 tags: [VPN, VPS, VLESS, Reality, uTLS, Sing-box]
 ---
 
