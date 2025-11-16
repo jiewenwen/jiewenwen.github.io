@@ -1,8 +1,8 @@
 ---
-title: 手动部署 Sing-box VLESS + Reality + uTLS 完整教程
+title: 手动部署 VLESS + Reality + uTLS 完整教程
 date: 2025-11-17 00:12:00 +0800
 categories: [技术]
-tags: [VPN, VPS, VLESS, Reality, uTLS]
+tags: [VPN, VPS, VLESS, Reality, uTLS, Sing-box]
 ---
 
 
@@ -11,8 +11,9 @@ tags: [VPN, VPS, VLESS, Reality, uTLS]
 
 - **客户端：Shadowrocket（iOS）**
 - **服务器：Linux（Debian/Ubuntu/CentOS 都可）**
+- **基于Sing-box**
 - **协议：VLESS + Reality + uTLS（Chrome 指纹）**
-- **不依赖 SUI 面板**
+- **不依赖 SUI 面板等面板**
 - **不暴露面板端口**
 - **最高安全性 + 最低指纹特征**
 
@@ -26,25 +27,25 @@ tags: [VPN, VPS, VLESS, Reality, uTLS]
 
 适用于 Debian / Ubuntu：
 
-```
+```bash
 bash <(curl -fsSL https://sing-box.app/install.sh)
 ```
 
 安装完成后，配置文件路径在：
 
-```
+```bash
 /etc/sing-box/config.json
 ```
 
 可执行文件路径在：
 
-```
+```bash
 /usr/local/bin/sing-box
 ```
 
 systemd 服务：
 
-```
+```bash
 systemctl restart sing-box
 systemctl status sing-box
 ```
@@ -63,13 +64,13 @@ Sing-box 自带工具，我们来生成 Reality 密钥对、Short ID 和 UUID。
 
 ## 1. 生成 Reality 密钥对：
 
-```
+```bash
 sing-box generate reality-key
 ```
 
 输出示例（请复制保存）：
 
-```
+```bash
 Private key: XXXXXXXXXXXXXXXXXXXX
 Public key:  YYYYYYYYYYYYYYYYYYYY
 ```
@@ -78,13 +79,13 @@ Public key:  YYYYYYYYYYYYYYYYYYYY
 
 ## 2. 生成 short_id：
 
-```
+```bash
 sing-box generate reality-short-id
 ```
 
 输出示例（请复制保存）：
 
-```
+```bash
 abcd1234
 ```
 
@@ -94,13 +95,13 @@ abcd1234
 
 ## 3. 生成 UUID：
 
-```
+```bash
 sing-box generate uuid
 ```
 
 输出示例（请复制保存）：
 
-```
+```bash
 zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz
 ```
 
@@ -114,13 +115,13 @@ zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz
 
 路径在：
 
-```
+```bash
 nano /etc/sing-box/config.json
 ```
 
 JSON内容（请使用 **第二步** 生成的值替换“替换为...”部分）：
 
-```
+```json
 {
   "log": {
     "level": "warn"
@@ -170,7 +171,7 @@ JSON内容（请使用 **第二步** 生成的值替换“替换为...”部分�
 
 推荐伪装域名（客户端和服务器必须一致）：
 
-```
+```bash
 www.cloudflare.com
 www.google.com
 www.apple.com
@@ -198,19 +199,19 @@ Reality 不需要证书，不需要域名解析，不需要 `allowInsecure`。
 
 检查语法：
 
-```
+```bash
 sing-box check -c /etc/sing-box/config.json
 ```
 
 如果输出：
 
-```
+```bash
 Configuration OK
 ```
 
 启动并设置开机自启：
 
-```
+```bash
 systemctl restart sing-box
 systemctl enable sing-box
 systemctl status sing-box
@@ -226,7 +227,7 @@ systemctl status sing-box
 
 必要（以 UFW 为例）：
 
-```
+```bash
 ufw allow 443/tcp
 ```
 
@@ -273,7 +274,7 @@ Reality 必须使用 TCP（真实流量就是 HTTPS）。
 
 查看是否显示：
 
-```
+```bash
 Connected
 ```
 
