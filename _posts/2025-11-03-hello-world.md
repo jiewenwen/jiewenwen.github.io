@@ -9,7 +9,7 @@ tags: [jekyll, github-pages]
 
 这是我使用 Jekyll 和 Chirpy 主题搭建的第一篇博客文章。
 
-### 关于这个博客
+### `关于这个博客`
 
 我将在这里分享：
 - 技术学习笔记
