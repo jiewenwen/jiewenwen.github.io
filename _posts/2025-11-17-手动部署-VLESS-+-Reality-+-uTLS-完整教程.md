@@ -13,7 +13,7 @@ tags: [VPN, VPS, VLESS, Reality, uTLS, Sing-box]
 - **服务器：Linux（Debian/Ubuntu/CentOS 都可）**
 - **基于Sing-box**
 - **协议：VLESS + Reality + uTLS（Chrome 指纹）**
-- **不依赖 SUI 面板等面板**
+- **不依赖 S-UI，X-UI等面板**
 - **不暴露面板端口**
 - **最高安全性 + 最低指纹特征**
 
@@ -33,13 +33,13 @@ bash <(curl -fsSL https://sing-box.app/install.sh)
 
 安装完成后，配置文件路径在：
 
-```bash
+```
 /etc/sing-box/config.json
 ```
 
 可执行文件路径在：
 
-```bash
+```
 /usr/local/bin/sing-box
 ```
 
@@ -163,7 +163,7 @@ JSON内容（请使用 **第二步** 生成的值替换“替换为...”部分�
 
 
 
-# **关键说明（非常重要）**
+## **关键说明（非常重要）**
 
 
 
@@ -171,7 +171,7 @@ JSON内容（请使用 **第二步** 生成的值替换“替换为...”部分�
 
 推荐伪装域名（客户端和服务器必须一致）：
 
-```bash
+```
 www.cloudflare.com
 www.google.com
 www.apple.com
@@ -270,23 +270,23 @@ Reality 必须使用 TCP（真实流量就是 HTTPS）。
 
 
 
-### 1. 连接 Shadowrocket
+## 1. 连接 Shadowrocket
 
 查看是否显示：
 
-```bash
+```
 Connected
 ```
 
 
 
-### 2. 测试 IP
+## 2. 测试 IP
 
 访问 `https://chat.openai.com` 或 `https://www.youtube.com`。
 
 
 
-### 3. 测试现实功能
+## 3. 测试现实功能
 
 在 Shadowrocket 查看 Log：
 
