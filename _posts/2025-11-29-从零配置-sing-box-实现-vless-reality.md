@@ -1,5 +1,5 @@
 ---
-title: 从零配置 sing-box 实现 VLESS + Reality（无需域名，最强隐蔽）
+title: 从零配置 sing-box 实现 VLESS + Reality 协议
 date: 2025-11-29 12:00:00 +0800
 categories: [Tutorial, Network]
 tags: [sing-box, vless, reality, vps, proxy]
