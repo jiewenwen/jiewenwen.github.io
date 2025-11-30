@@ -24,7 +24,7 @@ tags: [Hysteria2, HY2, Cloudflare, Shadowrocket, sing-box, VPS, TLS, ACME]
 | ---- | ---- | ------ | --------- |
 | A    | @    | 157.17.17.43 | DNS only |
 
-## 2. 安装 Hysteria2（官方脚本）
+## **2. 安装 Hysteria2（官方脚本）**
 运行官方一键脚本：
 
 ```bash
