@@ -77,7 +77,7 @@ sudo systemctl enable hysteria-server.service
 sudo systemctl status hysteria-server.service
 ```
 
-如果提示active(running)表示启动成功，并且证书已申请成功。如果提示failed失败，可能是防火墙未放行443/udp端口。
+如果提示**active(running)**表示启动成功，并且证书已申请成功。如果提示failed失败，可能是防火墙未放行443/udp端口。
 
 ## **4. Shadowrocket 客户端连接（iOS）**
 ### 4.1 基础配置
