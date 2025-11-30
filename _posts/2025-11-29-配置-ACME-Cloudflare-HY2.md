@@ -7,12 +7,12 @@ tags: [Hysteria2, HY2, Cloudflare, Shadowrocket, sing-box, VPS, TLS, ACME]
 
 本教程使用 Cloudflare 域名（例如 example.com）与 ACME 证书在 VPS 上部署 Hysteria2（HY2）节点，并提供 Shadowrocket 客户端配置示例。适用于 Debian / Ubuntu / CentOS 等常见发行版。
 
-## Hysteria2 是什么
+## ** Hysteria2 是什么**
 - 基于 QUIC，抗丢包、低延迟，更适合跨境网络
 - 可通过 HTTPS/HTTP3 伪装，支持自动 ACME 证书获取
 - 在移动宽带（移动/联通/电信）环境表现优秀
 
-## 1. 准备工作
+## **1. 准备工作**
 ### 1.1 一台 VPS
 支持 IPv4 或 IPv6（双栈更佳）。
 
@@ -33,8 +33,8 @@ bash <(curl -fsSL https://get.hy2.sh/)
 
 脚本会安装最新版 hysteria2、创建 systemd 服务，并生成 `/etc/hysteria/config.yaml`。
 
-## 3. 修改 hy2 配置文件
-编辑 Hysteria2 配置
+## **3. 修改 hy2 配置文件**
+编辑服务器 Hysteria2 配置
 
 ```bash
 sudo nano /etc/hysteria/config.yaml
@@ -79,7 +79,7 @@ sudo systemctl status hysteria-server.service
 
 如果提示active(running)表示启动成功，并且证书已申请成功。如果提示failed失败，可能是防火墙未放行443/udp端口。
 
-## 4. Shadowrocket 客户端连接（iOS）
+## **4. Shadowrocket 客户端连接（iOS）**
 ### 4.1 基础配置
 
 | 字段   | 填写内容           |
@@ -108,7 +108,7 @@ sudo systemctl status hysteria-server.service
 - QUIC 版本：默认
 - 心跳：默认
 
-## 5. 节点测试
+## **5. 节点测试**
 Shadowrocket 中：
 1) 点击刚添加的 HY2 节点
 2) 启用代理
@@ -116,7 +116,7 @@ Shadowrocket 中：
 
 可以正常使用即部署成功。
 
-## 6. 常见问题
+## **6. 常见问题**
 **Q1：Cloudflare 可以开橙云吗？**
 
 不可以。HY2 基于 QUIC，HTTP CDN 无法反代此类流量，必须使用灰云（DNS only）。
