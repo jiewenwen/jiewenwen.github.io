@@ -24,7 +24,7 @@ tags: [sing-box, vless, reality, vps, proxy]
 Reality 最大优势就是模拟真实网站 TLS 握手，几乎无法被区分。
 
 
-## 2. 安装 sing-box
+## **2. 安装 sing-box**
 
 更新系统后执行：
 
@@ -45,7 +45,7 @@ sing-box version
 /etc/sing-box/config.json
 ```
 
-## 3. 生成 Reality 配置所需参数
+## **3. 生成 Reality 配置所需参数**
 
 Reality 需要：
 
@@ -110,7 +110,7 @@ ab12cd34
 www.microsoft.com
 ```
 
-## 4. 编写 sing-box 配置文件（完整可用）
+## **4. 编写 sing-box 配置文件（完整可用）**
 
 编辑：
 
@@ -175,22 +175,22 @@ nano /etc/sing-box/config.json
 保存：`Ctrl + O`， 
 退出：`Ctrl + X`
 
-## 5. 检查与启动服务
+## **5. 检查与启动服务**
 
-### 检查 JSON 格式（重要）
+### 5.1 检查 JSON 格式（重要）
 
 ```bash
 sing-box check -c /etc/sing-box/config.json
 ```
 
-### 启动与开机自启
+### 5.2 启动与开机自启
 
 ```bash
 systemctl enable sing-box
 systemctl start sing-box
 ```
 
-### 查看状态
+### 5.3 查看状态
 
 ```bash
 systemctl status sing-box
@@ -204,7 +204,7 @@ systemctl status sing-box
 journalctl -u sing-box -n 100
 ```
 
-## 6. 防火墙与安全组配置
+## **6. 防火墙与安全组配置**
 
 若启用 UFW：
 
@@ -218,7 +218,7 @@ ufw reload
 
 👉 控制台开放 **TCP 443** 即可。
 
-## 7. Shadowrocket 客户端配置（手把手）
+## **7. Shadowrocket 客户端配置**
 
 打开 Shadowrocket → 右上角 + → **Type: VLESS**
 
@@ -244,9 +244,9 @@ https://ipinfo.io
 
 若显示 VPS IP = 成功
 
-## 8. 常见错误与排查
+## **8. 常见错误与排查**
 
-### ❌ TLS handshake error
+### 8.1 TLS handshake error
 
 原因：
 
@@ -255,7 +255,7 @@ https://ipinfo.io
 - Short ID 不一致
 - 私钥与公钥不匹配
 
-### ❌ Connected 但无法上网
+### 8.2 Connected 但无法上网
 
 原因：
 
