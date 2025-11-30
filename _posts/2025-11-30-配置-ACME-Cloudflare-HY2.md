@@ -16,7 +16,7 @@ tags: [Hysteria2, HY2, Cloudflare, Shadowrocket, sing-box, VPS, TLS, ACME]
 ### 1.1 一台 VPS
 支持 IPv4 或 IPv6（双栈更佳）。
 
-### 1.2 Cloudflare 域名
+### 1.2 一个域名
 - 本文使用的是cloudflare购买的域名。在cloudflare中添加域名的dns记录。A/AAAA 记录指向 VPS（可使用 hy 等子域名），必须为灰云（DNS Only），不能使用橙云（proxy）。
 - 示例：
 
