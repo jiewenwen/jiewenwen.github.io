@@ -1,5 +1,5 @@
 ---
-title: 从零配置 sing-box 实现 VLESS + Reality 协议
+title: 从零配置 sing-box 部署 VLESS + Reality 节点
 date: 2025-11-29 12:00:00 +0800
 categories: [Tutorial, Network]
 tags: [sing-box, vless, reality, vps, proxy]

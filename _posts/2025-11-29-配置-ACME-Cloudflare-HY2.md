@@ -1,5 +1,5 @@
 ---
-title: 使用自域名 + CA 证书部署 Hysteria2（HY2）节点
+title: 使用自域名 + CA 证书部署 Hysteria2 节点
 date: 2025-11-29 12:00:00 +0800
 categories: [Tutorial, Network]
 tags: [Hysteria2, HY2, Cloudflare, Shadowrocket, sing-box, VPS, TLS, ACME]
