@@ -61,7 +61,7 @@ masquerade:
     rewriteHost: true
 ```
 
-保存后重启并查看日志：
+保存后重启服务：
 
 ```bash
 sudo systemctl restart hysteria-server.service
