@@ -52,7 +52,7 @@ acme:
 
 auth:
   type: password
-  password: "YourStrongPassword"
+  password: YourStrongPassword
 
 masquerade:
   type: proxy
