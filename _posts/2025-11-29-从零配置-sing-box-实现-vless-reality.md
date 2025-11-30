@@ -17,9 +17,9 @@ tags: [sing-box, vless, reality, vps, proxy]
 
 无需：
 
-- ❌ 域名
-- ❌ 证书
-- ❌ 面板（如 s-ui）
+- 域名
+- 证书
+- 面板（如 s-ui）
 
 Reality 最大优势就是模拟真实网站 TLS 握手，几乎无法被区分。
 
@@ -81,7 +81,7 @@ PrivateKey: y9X2EXAMPLE...
 PublicKey: 90dfEXAMPLE...
 ```
 
-⚠️ PrivateKey = 服务端用
+⚠️ PrivateKey = 服务端用，
 ⚠️ PublicKey = 客户端用
 
 ### 3.3 生成 Short ID
@@ -104,9 +104,7 @@ ab12cd34
 - `www.microsoft.com`
 - `www.cloudflare.com`
 
-不需要 DNS，不需要证书。
-
-本教程使用：
+不需要 DNS，不需要证书。本教程使用：
 
 ```
 www.microsoft.com
@@ -174,7 +172,7 @@ nano /etc/sing-box/config.json
 | `REPLACE_PRIVATE_KEY` | `y9X2EXAMPLE...`                       |
 | `REPLACE_SHORT_ID`    | `ab12cd34`                             |
 
-保存：`Ctrl + O`
+保存：`Ctrl + O`， 
 退出：`Ctrl + X`
 
 ## 5. 检查与启动服务
