@@ -86,7 +86,7 @@ sudo systemctl status hysteria-server.service
 | ------ | ------------------ |
 | 类型   | Hysteria2          |
 | 服务器 | example.com        |
-| 端口   | 443                |
+| 端口   | 8443                |
 | 密码   | YourStrongPassword |
 
 ### 4.2 TLS 设置（必须开启）
