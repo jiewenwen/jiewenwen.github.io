@@ -40,7 +40,7 @@ bash <(curl -fsSL https://get.hy2.sh/)
 sudo nano /etc/hysteria/config.yaml
 ```
 
-示例配置（替换为自己的域名、邮箱和 Token）：
+示例配置（**替换为自己的域名、邮箱和密码**）：
 
 ```yaml
 listen: :443
