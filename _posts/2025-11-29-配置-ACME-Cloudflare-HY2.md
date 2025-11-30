@@ -7,7 +7,7 @@ tags: [Hysteria2, HY2, Cloudflare, Shadowrocket, sing-box, VPS, TLS, ACME]
 
 本教程使用 Cloudflare 域名（例如 example.com）与 ACME 证书在 VPS 上部署 Hysteria2（HY2）节点，并提供 Shadowrocket 客户端配置示例。适用于 Debian / Ubuntu / CentOS 等常见发行版。
 
-## ** Hysteria2 是什么**
+## **Hysteria2 是什么**
 - 基于 QUIC，抗丢包、低延迟，更适合跨境网络
 - 可通过 HTTPS/HTTP3 伪装，支持自动 ACME 证书获取
 - 在移动宽带（移动/联通/电信）环境表现优秀
