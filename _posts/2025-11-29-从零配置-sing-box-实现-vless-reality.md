@@ -6,7 +6,7 @@ tags: [sing-box, vless, reality, vps, proxy]
 ---
 
 
-## 1. 环境要求
+## **1. 环境要求**
 
 建议：
 
