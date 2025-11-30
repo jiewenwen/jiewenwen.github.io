@@ -97,7 +97,7 @@ sudo systemctl status hysteria-server.service
 | SNI            | example.com |
 | Allow Insecure | 关闭        |
 
-> 必须填写 SNI，以匹配服务器证书域名，否则无法握手。
+**必须填写 SNI，以匹配服务器证书域名，否则无法握手。**
 
 ### 4.3 Bandwidth（可选）
 - 不填：使用 BBR，更稳定（推荐）
