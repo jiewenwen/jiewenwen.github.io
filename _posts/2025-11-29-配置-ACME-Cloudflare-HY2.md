@@ -47,7 +47,7 @@ listen: :443
 
 acme:
   domains:
-    - "example.com"
+    - example.com
   email: you@example.com
 
 auth:
