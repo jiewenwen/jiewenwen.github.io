@@ -17,12 +17,12 @@ tags: [Hysteria2, HY2, Cloudflare, Shadowrocket, sing-box, VPS, TLS, ACME]
 支持 IPv4 或 IPv6（双栈更佳）。
 
 ### 1.2 Cloudflare 域名
-- A/AAAA 记录指向 VPS，必须为灰云（DNS Only），不能使用橙云
+- 在cloudflare中添加域名的dns记录。A/AAAA 记录指向 VPS（可使用 hy 等子域名），必须为灰云（DNS Only），不能使用橙云
 - 示例：
 
 | 类型 | 名称 | 值     | 代理状态  |
 | ---- | ---- | ------ | --------- |
-| A    | @    | 1.2.3.4 | DNS only |
+| A    | @    | 157.17.17.43 | DNS only |
 
 ## 2. 安装 Hysteria2（官方脚本）
 运行官方一键脚本：
@@ -33,7 +33,7 @@ bash <(curl -fsSL https://get.hy2.sh/)
 
 脚本会安装最新版 hysteria2、创建 systemd 服务，并生成 `/etc/hysteria/config.yaml`。
 
-## 3. 申请证书：ACME + Cloudflare DNS-01（推荐）
+## 3. 修改 hy2 配置文件
 编辑 Hysteria2 配置
 
 ```bash
@@ -64,10 +64,20 @@ masquerade:
 保存后重启并查看日志：
 
 ```bash
-sudo systemctl restart hysteria-server
+sudo systemctl restart hysteria-server.service
 ```
 
-日志出现 `server up and running` 即表示证书申请成功、服务正常启动。
+设置开机启动：
+```bash
+sudo systemctl enable hysteria-server.service
+```
+
+检查启动状态：
+```bash
+sudo systemctl status hysteria-server.service
+```
+
+如果提示active(running)表示启动成功，并且证书已申请成功。如果提示failed失败，可能是防火墙未放行443/udp端口。
 
 ## 4. Shadowrocket 客户端连接（iOS）
 ### 4.1 基础配置
