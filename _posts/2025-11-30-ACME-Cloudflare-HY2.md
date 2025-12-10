@@ -57,7 +57,7 @@ auth:
 masquerade:
   type: proxy
   proxy:
-    url: https://bing.com/
+    url: https://www.bing.com/
     rewriteHost: true
 ```
 
