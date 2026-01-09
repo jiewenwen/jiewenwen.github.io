@@ -12,7 +12,7 @@ tags: [sing-box, vless, reality, vps, proxy]
 
 - **系统**：Debian 12 / Ubuntu 22.04（其他版本也可）
 - **架构**：x86_64 / ARM 均支持
-- **端口**：开放 443 (TCP/UDP)
+- **端口**：开放 443/TCP
 - **客户端**：iOS **Shadowrocket**
 
 无需：
@@ -210,7 +210,6 @@ journalctl -u sing-box -n 100
 
 ```bash
 ufw allow 443/tcp
-ufw allow 443/udp
 ufw reload
 ```
 
