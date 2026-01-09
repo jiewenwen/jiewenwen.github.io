@@ -1,5 +1,5 @@
 ---
-title: 从零配置 sing-box 部署 VLESS + Vision + Reality 节点
+title: 使用 sing-box 部署 VLESS + Vision + Reality 节点
 date: 2025-11-29 12:00:00 +0800
 categories: [Network]
 tags: [sing-box, vless, reality, vps, proxy]
