@@ -8,6 +8,8 @@ tags: [sing-box, vless, reality, vps, proxy]
 
 ## **1. 环境要求**
 
+使用下来，VLESS + grpc + Reality 节点的稳定性似乎更胜于 VLESS + vision + Reality 节点。在此给出 VLESS + grpc + Reality 节点的详细配置。
+
 建议：
 
 - **系统**：Debian 12 / Ubuntu 22.04（其他版本也可）
