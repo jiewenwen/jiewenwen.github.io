@@ -193,7 +193,7 @@ nano /etc/sing-box/config.json
         {
           // Endpoint：wgcf-profile.conf 里的 Endpoint
           // 可以写域名
-          "address": "162.159.192.1",
+          "address": "engage.cloudflareclient.com",
           "port": 2408,
 
           // wgcf-profile.conf 里的 PublicKey
