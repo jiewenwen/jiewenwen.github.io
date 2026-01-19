@@ -333,8 +333,6 @@ wireguard endpoint warp connected
 
 ## **八、客户端配置**
 
-### IPv4/IPv6 节点
-
 打开 Shadowrocket → 右上角 + → **Type: VLESS**
 
 填写以下内容：
