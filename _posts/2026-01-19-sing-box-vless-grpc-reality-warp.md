@@ -353,7 +353,7 @@ wireguard endpoint warp connected
 
 ## 九、验证是否走 WARP
 
-### IPv4 连接后，访问：
+IPv4 连接后，访问：
 
 ```bash
 https://www.cloudflare.com/cdn-cgi/trace
