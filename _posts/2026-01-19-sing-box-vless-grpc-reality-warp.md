@@ -228,11 +228,11 @@ nano /etc/sing-box/config.json
       },
       "tls": {
         "enabled": true,
-        "server_name": "www.example.com",
+        "server_name": "www.microsoft.com",
         "reality": {
           "enabled": true,
           "handshake": {
-            "server": "www.example.com",
+            "server": "www.microsoft.com",
             "server_port": 443
           },
           "private_key": "YOUR_REALITY_PRIVATE_KEY",
@@ -245,7 +245,7 @@ nano /etc/sing-box/config.json
       "type": "vless",
       "tag": "vless-in-6",
       "listen": "::",
-      "listen_port": 4443,
+      "listen_port": 8443,
       "users": [
         {
           "uuid": "YOUR_UUID",
@@ -258,11 +258,11 @@ nano /etc/sing-box/config.json
       },
       "tls": {
         "enabled": true,
-        "server_name": "www.example.com",
+        "server_name": "www.microsoft.com",
         "reality": {
           "enabled": true,
           "handshake": {
-            "server": "www.example.com",
+            "server": "www.microsoft.com",
             "server_port": 443
           },
           "private_key": "YOUR_REALITY_PRIVATE_KEY",
@@ -329,25 +329,25 @@ wireguard endpoint warp connected
 
 ## 八、客户端配置
 
-### IPv4 节点
+### IPv4/IPv6 节点
 
-| 项目 | 值             |
-| ---- | -------------- |
-| 地址 | v4.example.com |
-| 端口 | 443            |
-| 协议 | VLESS          |
-| 传输 | gRPC           |
-| TLS  | Reality        |
+打开 Shadowrocket → 右上角 + → **Type: VLESS**
 
-### IPv6 节点
+填写以下内容：
 
-| 项目 | 值             |
-| ---- | -------------- |
-| 地址 | v6.example.com |
-| 端口 | 4443           |
-| 协议 | VLESS          |
-| 传输 | gRPC           |
-| TLS  | Reality        |
+| 项目                  | 值                                          |
+| --------------------- | ------------------------------------------- |
+| **Address**           | v4.example.com   （IPv6节点填写 v6.example.com ）                          |
+| **Port**              | 443     （IPv6节点填写 8443）                                    |
+| **UUID**              | 上面生成的 UUID                             |
+| **transport**         | grpc                                        |
+| **Host**              | v4.example.com     （IPv6节点填写 v6.example.com ）                       |
+| **Service Name**      | grpc                         |
+| **TLS**               | 开启                                        |
+| **SNI**               | www.microsoft.com                         |
+| **Public Key**        | Reality 的 PublicKey                        |
+| **Short ID**          | 你的 Short ID                               |
+| **Fingerprint**       | `chrome` 或默认（Shadowrocket 默认为 Safari） |
 
 ------
 
