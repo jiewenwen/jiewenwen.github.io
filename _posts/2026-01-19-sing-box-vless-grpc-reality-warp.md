@@ -1,6 +1,6 @@
 ---
 title: sing-box + VLESS gRPC Reality + WARP 完整教程
-date: 2026-01-19 23:00:00 +0800
+date: 2026-01-19 11:00:00 +0800
 categories: [Network]
 tags: [sing-box, vless, reality, vps, proxy]
 ---
