@@ -5,7 +5,7 @@ categories: [Network]
 tags: [sing-box, vless, reality, vps, proxy]
 ---
 
-## 前言
+## **前言**
 
 考虑到平时用机房IP使用AI工具如Chatgpt、Claude等，容易降智。解决方案最好的无疑是买一个住宅IP。但是考虑到价格相对昂贵，基于能省则省原则，本文考虑到第二种折中方案，即vps节点出口套用Warp。本文解决的一个经典场景即是，vps开了双栈，ipv4走warp出口，ipv6走直连。
 
@@ -26,7 +26,7 @@ tags: [sing-box, vless, reality, vps, proxy]
 
 ------
 
-## 一、准备工作
+## **一、准备工作**
 
 你需要：
 
@@ -45,7 +45,7 @@ DNS 示例：
 
 ------
 
-## 二、安装 sing-box
+## **二、安装 sing-box**
 
 ### 2.1 下载
 
@@ -62,7 +62,7 @@ sing-box version
 
 ------
 
-## 三、安装 Cloudflare WARP（wgcf）
+## **三、安装 Cloudflare WARP（wgcf）**
 
 WARP 本质是一个 WireGuard 隧道，我们用 `wgcf` 生成配置。
 
@@ -89,7 +89,7 @@ wgcf-profile.conf
 
 ------
 
-## 四、读取 WARP 参数
+## **四、读取 WARP 参数**
 
 ```bash
 cat wgcf-profile.conf
@@ -122,7 +122,7 @@ PersistentKeepalive = 25
 
 ------
 
-## 五、生成 Reality 密钥、UUID、ShortID
+## **五、生成 Reality 密钥、UUID、ShortID**
 
 生成 Reality 密钥
 
@@ -151,7 +151,7 @@ sing-box generate rand --hex 8
 
 ------
 
-## 六、完整 sing-box 配置
+## **六、完整 sing-box 配置**
 
 编辑配置文件：
 
@@ -313,7 +313,7 @@ nano /etc/sing-box/config.json
 
 ------
 
-## 七、启动 sing-box
+## **七、启动 sing-box**
 
 ```bash
 systemctl enable sing-box
@@ -331,7 +331,7 @@ wireguard endpoint warp connected
 
 ------
 
-## 八、客户端配置
+## **八、客户端配置**
 
 ### IPv4/IPv6 节点
 
@@ -355,7 +355,7 @@ wireguard endpoint warp connected
 
 ------
 
-## 九、验证是否走 WARP
+## **九、验证是否走 WARP**
 
 IPv4 连接后，访问：
 
@@ -367,7 +367,7 @@ https://www.cloudflare.com/cdn-cgi/trace
 
 ------
 
-## 十、最终结构图
+## **十、最终结构图**
 
 ```
 IPv4 → VLESS → WARP → Cloudflare → Internet
@@ -376,7 +376,7 @@ IPv6 → VLESS → Direct → Internet
 
 ------
 
-## 十一、总结
+## **十一、总结**
 
 - sing-box 原生支持 WARP
 - IPv4 + WARP 更稳定
