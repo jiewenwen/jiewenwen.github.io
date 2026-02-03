@@ -7,7 +7,7 @@ tags: [sing-box, vless, reality, vps, proxy]
 
 ## **前言**
 
-考虑到平时用机房IP使用AI工具如Chatgpt、Claude等，容易降智。解决方案最好的无疑是买一个住宅IP。但是考虑到价格相对昂贵，基于能省则省原则，本文考虑到第二种折中方案，即vps节点出口套用Warp。本文解决的一个经典场景即是，vps开了双栈，ipv4走warp出口，ipv6走直连。
+考虑到平时用机房IP使用AI工具如Chatgpt、Claude等，容易降智。解决方案最好的无疑是买一个住宅IP。但是住宅IP价格相对昂贵，基于能省则省原则，本文使用第二种折中方案，即vps节点出口套用Warp。本文解决的一个经典场景即是，vps开了双栈，ipv4走warp出口，ipv6走直连。
 
 目标效果：
 
