@@ -101,7 +101,7 @@ sudo systemctl status hysteria-server.service
 
 ### 4.3 Bandwidth（可选）
 - 不填：使用 BBR，更稳定（推荐）
-- 填写：使用 Brutal，更快但可能不稳
+- 填写：使用 Brutal，更快但可能不稳。**对于垃圾线路而言，填写适当带宽将获取比较好的体验，能够拯救垃圾线路。**
 
 ### 4.4 其他设置
 - Obfs：关闭
