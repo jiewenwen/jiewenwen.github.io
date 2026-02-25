@@ -1,5 +1,5 @@
 ---
-title: GitHub 多账号 SSH 配置：personal/work + includeIf（避坑指南）
+title: GitHub 多账号 SSH 配置（避坑指南）
 date: 2026-02-25 13:00:00 +0800
 categories: [Git]
 tags: [github, ssh, git, includeif, permission-denied-publickey, key-is-already-in-use]
