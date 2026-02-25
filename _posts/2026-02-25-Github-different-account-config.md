@@ -107,7 +107,7 @@ nano ~/.ssh/config
 
 写入：
 
-```sshconfig
+```ini
 Host github-personal
   HostName github.com
   User git
@@ -125,7 +125,7 @@ Host github-work
 
 如果你是 macOS，且希望 key 自动保存到钥匙串，建议追加：
 
-```sshconfig
+```ini
 Host *
   IgnoreUnknown UseKeychain
 
@@ -138,7 +138,7 @@ Host github-personal github-work
 如果你所在网络封锁了 SSH 22 端口，再切换为 443 备用方案（SSH over HTTPS）。  
 只替换上面两个 `Host` 段中的以下字段，其余配置保持不变：
 
-```sshconfig
+```ini
 Host github-personal
   HostName ssh.github.com
   Port 443
