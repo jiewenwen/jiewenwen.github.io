@@ -2,7 +2,7 @@
 title: 使用自域名 + CA 证书部署 Hysteria2 节点
 date: 2025-11-30 12:00:00 +0800
 categories: [Network]
-tags: [Hysteria2, HY2, Cloudflare, Shadowrocket, sing-box, VPS, TLS, ACME]
+tags: [Hysteria2, HY2, Cloudflare, Shadowrocket, sing-box, vps, TLS, ACME]
 ---
 
 本教程使用 Cloudflare 域名（例如 example.com）与 ACME 证书在 VPS 上部署 Hysteria2（HY2）节点，并提供 Shadowrocket 客户端配置示例。适用于 Debian / Ubuntu / CentOS 等常见发行版。
