@@ -18,7 +18,7 @@ timezone: Asia/Shanghai
 
 title: FLYNOA # the main title
 
-tagline: Focused in AI research & app development & learning # it will display as the subtitle
+tagline: Focused on AI research & app development & learning # it will display as the subtitle
 
 description: >- # used by seo meta and the atom feed
   FLYNOA Blog: Exploring AI breakthroughs, building practical applications, and sharing continuous learning insights.
