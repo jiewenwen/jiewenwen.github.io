@@ -3,7 +3,7 @@ layout: post
 title: "Mac 存储空间清理教程：找出 System Data 过大的真正原因"
 date: 2026-04-18 00:40:00 +0800
 categories: [macOS]
-tags: [Mac, 存储清理, System Data, Xcode, Docker]
+tags: [Mac, System Data, Xcode, Docker]
 ---
 
 很多人清理 Mac 存储空间时，第一眼看到的都是这几个问题：
