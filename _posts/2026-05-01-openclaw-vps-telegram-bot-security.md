@@ -3,7 +3,7 @@ layout: post
 title: "OpenClaw 安装、配置与 Telegram Bot 接入教程：从 VPS 部署到安全加固"
 date: 2026-05-01 13:00:00 +0800
 categories: [AI]
-tags: [OpenClaw, Telegram Bot, VPS, Gateway, Security]
+tags: [OpenClaw, Telegram Bot, vps, Gateway, Security]
 ---
 
 这篇文章记录一次在 Debian/Ubuntu VPS 上部署 OpenClaw，并通过 Telegram Bot 接入对话的完整流程。目标不是一次性打开所有功能，而是先跑通一条稳定、可维护、相对安全的主线：
