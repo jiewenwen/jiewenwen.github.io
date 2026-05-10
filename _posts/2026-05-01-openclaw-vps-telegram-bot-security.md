@@ -504,7 +504,7 @@ openclaw logs --follow
 然后给 Bot 发一条消息，在日志里找类似：
 
 ```text
-from.id: 5272077915
+from.id: 123456789
 ```
 
 这个数字就是 Telegram 用户 ID。
@@ -519,7 +519,7 @@ curl "https://api.telegram.org/bot你的BotToken/getUpdates"
 
 ```json
 "from": {
-  "id": 5272077915
+  "id": 123456789
 }
 ```
 
@@ -540,7 +540,7 @@ nano ~/.openclaw/openclaw.json
       "enabled": true,
       "botToken": "你的 Telegram Bot Token",
       "dmPolicy": "allowlist",
-      "allowFrom": ["5272077915"],
+      "allowFrom": ["123456789"],
       "groups": {
         "*": {
           "requireMention": true
@@ -572,7 +572,7 @@ openclaw gateway restart
 ```json
 {
   "commands": {
-    "ownerAllowFrom": ["telegram:5272077915"]
+    "ownerAllowFrom": ["telegram:123456789"]
   }
 }
 ```
