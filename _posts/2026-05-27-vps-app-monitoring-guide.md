@@ -8,9 +8,12 @@ tags: [vps, Docker, Prometheus, Grafana, Uptime Kuma, Sentry, Node Exporter, 后
 
 如果你在 VPS 上部署了自己的 App 后端，例如 Go、Node.js、Java、Python 后端，那么上线之后最重要的问题不是“服务能不能跑起来”，而是：
 
-> 服务挂了，我能不能第一时间知道？  
-> 用户访问慢了，我能不能定位原因？  
-> VPS CPU、内存、磁盘异常，我能不能提前发现？  
+> 服务挂了，我能不能第一时间知道？
+>
+> 用户访问慢了，我能不能定位原因？
+>
+> VPS CPU、内存、磁盘异常，我能不能提前发现？
+>
 > 后端出现 500、panic、数据库连接失败，我能不能查到日志？
 
 很多小白一开始部署后端时，只会用：
@@ -26,7 +29,7 @@ docker logs
 
 目标是：**不追求复杂，但要实用、安全、可告警、可定位问题。**
 
-------
+---
 
 ## 一、我们到底要监控什么？
 
@@ -52,7 +55,7 @@ Loki：后期用于集中收集日志
 
 对于小白来说，不建议一上来就搭很复杂的监控平台。可以分阶段来。
 
-------
+---
 
 ## 二、推荐的小白监控方案
 
@@ -89,7 +92,7 @@ Loki：后期用于集中收集日志
 | Loki  | 存储和查询日志                        |
 | Alloy | 采集系统日志、Nginx 日志、Docker 日志 |
 
-------
+---
 
 ## 三、整体架构图
 
@@ -124,7 +127,7 @@ App 后端 -------> Sentry
                  上报 panic / exception / 慢请求
 ```
 
-------
+---
 
 ## 四、准备工作
 
@@ -150,7 +153,7 @@ grafana.example.com  Grafana
 
 你可以根据自己的域名替换。
 
-------
+---
 
 ## 五、第一步：后端必须提供健康检查接口
 
@@ -204,7 +207,7 @@ API 是否能正常响应
 
 如果你只是监控网站首页，有时并不能发现真正的后端问题。
 
-------
+---
 
 ## 六、安装 Docker 和 Docker Compose
 
@@ -231,7 +234,7 @@ docker compose version
 
 如果能看到版本号，说明 Docker 已经安装成功。
 
-------
+---
 
 ## 七、部署 Uptime Kuma
 
@@ -300,7 +303,7 @@ docker ps
 docker logs -f uptime-kuma
 ```
 
-------
+---
 
 ## 八、用 Nginx 反代 Uptime Kuma
 
@@ -377,7 +380,7 @@ https://status.example.com
 
 第一次进入会让你创建管理员账号。
 
-------
+---
 
 ## 九、Uptime Kuma 应该监控哪些东西？
 
@@ -407,7 +410,7 @@ https://api.example.com/health
 
 这样可以避免偶发网络波动导致误报。
 
-------
+---
 
 ### 2. 监控网站首页
 
@@ -417,7 +420,7 @@ https://api.example.com/health
 https://example.com
 ```
 
-------
+---
 
 ### 3. 监控 SSH 端口
 
@@ -441,7 +444,7 @@ Port：
 
 这样可以知道 VPS 的 SSH 端口是否还活着。
 
-------
+---
 
 ### 4. 监控 HTTPS 证书
 
@@ -449,7 +452,7 @@ Uptime Kuma 的 HTTP(s) 监控可以检查证书过期。
 
 建议开启证书过期提醒，避免证书突然过期导致 API 无法访问。
 
-------
+---
 
 ## 十、部署 Prometheus + Node Exporter + Grafana
 
@@ -505,7 +508,7 @@ scrape_configs:
 | node-exporter:9100 | 采集 VPS 系统指标        |
 | prometheus:9090    | 采集 Prometheus 自身指标 |
 
-------
+---
 
 ### 3. 创建 docker-compose.yml
 
@@ -582,7 +585,7 @@ node-exporter
 grafana
 ```
 
-------
+---
 
 ## 十一、用 Nginx 反代 Grafana
 
@@ -647,7 +650,7 @@ admin / admin
 
 请务必使用强密码。
 
-------
+---
 
 ## 十二、Grafana 添加 Prometheus 数据源
 
@@ -674,7 +677,7 @@ Save & test
 
 如果显示成功，说明 Grafana 已经可以读取 Prometheus 数据。
 
-------
+---
 
 ## 十三、导入 VPS 监控面板
 
@@ -711,7 +714,7 @@ CPU
 系统运行时间
 ```
 
-------
+---
 
 ## 十四、小白应该重点看哪些指标？
 
@@ -741,7 +744,7 @@ Load Average 长期大于 2
 
 说明服务器可能已经比较忙。
 
-------
+---
 
 ### 2. 内存
 
@@ -773,7 +776,7 @@ dmesg -T | grep -i "killed process"
 journalctl -k | grep -i oom
 ```
 
-------
+---
 
 ### 3. 磁盘
 
@@ -812,7 +815,7 @@ df -i
 sudo du -h --max-depth=1 / | sort -h
 ```
 
-------
+---
 
 ### 4. 网络
 
@@ -835,7 +838,7 @@ Nginx 出现 504
 用户反馈打不开
 ```
 
-------
+---
 
 ## 十五、后端也需要自己的监控指标
 
@@ -869,7 +872,7 @@ Prometheus 可以定期抓取这个接口。
 | 注册成功/失败数量     | 监控关键业务     |
 | 消息发送成功/失败数量 | 监控核心功能     |
 
-------
+---
 
 ## 十六、Go 后端接入 Prometheus 示例
 
@@ -917,7 +920,7 @@ func main() {
 
 注意：要确保 Prometheus 和后端容器在同一个 Docker 网络里。
 
-------
+---
 
 ## 十七、后端日志应该怎么写？
 
@@ -960,7 +963,7 @@ request_id
 
 因为用户反馈问题时，如果能拿到 request_id，你就可以快速找到对应日志。
 
-------
+---
 
 ## 十八、常用排查命令
 
@@ -976,7 +979,7 @@ docker ps
 docker ps -a
 ```
 
-------
+---
 
 ### 2. 查看后端日志
 
@@ -996,7 +999,7 @@ docker logs --tail=200 your-backend
 docker logs --since=1h your-backend
 ```
 
-------
+---
 
 ### 3. 查看 Docker Compose 日志
 
@@ -1018,7 +1021,7 @@ docker compose logs -f
 docker compose logs -f backend
 ```
 
-------
+---
 
 ### 4. 查看 systemd 服务日志
 
@@ -1040,7 +1043,7 @@ journalctl -u your-app -n 200
 journalctl -u your-app --since "1 hour ago"
 ```
 
-------
+---
 
 ### 5. 查看 Nginx 日志
 
@@ -1074,7 +1077,7 @@ sudo grep " 502 " /var/log/nginx/access.log | tail -50
 sudo grep " 504 " /var/log/nginx/access.log | tail -50
 ```
 
-------
+---
 
 ## 十九、常见故障排查
 
@@ -1114,7 +1117,7 @@ cd /opt/app
 docker compose up -d
 ```
 
-------
+---
 
 ### 故障二：网站显示 502 Bad Gateway
 
@@ -1150,7 +1153,7 @@ ss -tulpn | grep 你的后端端口
 curl -i http://127.0.0.1:你的后端端口/health
 ```
 
-------
+---
 
 ### 故障三：网站显示 504 Gateway Timeout
 
@@ -1195,7 +1198,7 @@ docker logs --since=10m your-backend
 sudo tail -100 /var/log/nginx/error.log
 ```
 
-------
+---
 
 ### 故障四：后端容器经常自动重启
 
@@ -1242,7 +1245,7 @@ sudo swapon /swapfile
 echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
 ```
 
-------
+---
 
 ## 二十、基础告警建议
 
@@ -1266,7 +1269,7 @@ HTTPS 证书过期时间
 | 恢复通知     | 开启  |
 | 证书过期提醒 | 开启  |
 
-------
+---
 
 ### 2. Grafana 告警
 
@@ -1282,7 +1285,7 @@ HTTPS 证书过期时间
 | P95 延迟       | > 500ms 或 1s          |
 | 后端进程重启   | 10 分钟内多次重启      |
 
-------
+---
 
 ## 二十一、接入 Sentry 监控后端异常
 
@@ -1339,7 +1342,7 @@ APP_ENV=production
 APP_VERSION=1.0.0
 ```
 
-------
+---
 
 ## 二十二、后期再部署 Loki 做日志集中化
 
@@ -1373,7 +1376,7 @@ Loki 的作用是集中存储和查询日志。
 
 可以等你的 App 稳定上线后再加。
 
-------
+---
 
 ## 二十三、安全注意事项
 
@@ -1425,7 +1428,7 @@ sudo ufw allow 9100
 sudo ufw allow 3000
 ```
 
-------
+---
 
 ## 二十四、推荐目录结构
 
@@ -1456,7 +1459,7 @@ sudo ufw allow 3000
 /opt/monitoring     放 Prometheus / Grafana / Node Exporter
 ```
 
-------
+---
 
 ## 二十五、日常检查清单
 
@@ -1501,7 +1504,7 @@ docker system prune -a
 
 因为它可能删除你后面还需要的镜像。
 
-------
+---
 
 ## 二十六、最小可用版本总结
 
@@ -1535,7 +1538,7 @@ Grafana Alloy
 Alertmanager
 ```
 
-------
+---
 
 ## 结语
 
@@ -1567,9 +1570,3 @@ Alertmanager
 ```
 
 监控不是为了看起来专业，而是为了在服务出问题时，能够尽快发现、尽快定位、尽快恢复。
-
-```
----
-
-这篇文章已经是标准 Jekyll Markdown 格式，包含 Front Matter，可以直接放到 `_posts` 目录发布。标题、分类和 tags 也已经配置好了。
-```
