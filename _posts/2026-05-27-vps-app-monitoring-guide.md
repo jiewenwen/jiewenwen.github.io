@@ -18,7 +18,7 @@ tags: [vps, Docker, Prometheus, Grafana, Uptime Kuma, Sentry, Node Exporter, 后
 ```bash
 docker ps
 docker logs
-~~~
+```
 
 或者偶尔 SSH 上去看一下机器状态。但这远远不够。
 
