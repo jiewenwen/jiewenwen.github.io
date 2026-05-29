@@ -61,10 +61,7 @@ docker compose -f docker-compose.prod.yml exec -T db sh -lc \
 'pg_dump -U "$POSTGRES_USER" "$POSTGRES_DB"'
 ```
 
-> **提示**
-> 
-> 这段命令故意放在单引号里，让 `$POSTGRES_USER` 和 `$POSTGRES_DB` 在 `db` 容器内部展开，而不是在宿主机上展开。如果写成双引号形式且宿主机缺乏同名变量，PostgreSQL 客户端可能会退回使用当前系统用户（例如 `root`）直接连接，最后报出 `role "root" does not exist` 错误。因此，在容器化部署执行备份时，更推荐明确在数据库容器内部读取对应环境变量。
-{: .prompt-warning }
+**注意：** 这段命令故意放在单引号里，让 `$POSTGRES_USER` 和 `$POSTGRES_DB` 在 `db` 容器内部展开，而不是在宿主机上展开。如果写成双引号且宿主机缺乏同名变量，PostgreSQL 客户端可能会退回使用当前系统用户（例如 `root`）连接，报出 `role "root" does not exist`。因此在容器化部署执行备份时，更推荐让数据库容器内部读取对应环境变量。
 
 ## 三、uploads 目录备份
 
@@ -78,19 +75,11 @@ tar -C /opt/example/example-backend \
   uploads
 ```
 
-> **打包路径建议**
-> 
-> 这里使用 `tar -C APP_DIR uploads`，备份包里的路径会是相对路径 `uploads/...`，而不是宿主机上的绝对路径 `/opt/example/example-backend/uploads/...`。这样以后迁移到新服务器、新文件路径时，解压会更加灵活，避免路径覆盖和层级多余。
-{: .prompt-tip }
+**打包路径建议：** 使用 `tar -C APP_DIR uploads` 时，备份包里的路径会是相对路径 `uploads/...`，而不是宿主机上的绝对路径 `/opt/example/example-backend/uploads/...`。这样迁移到新服务器或新路径时更灵活，避免路径覆盖和多余层级。
 
 ## 四、先做不覆盖生产库的恢复演练
 
-> **不可忽视的恢复演练**
-> 
-> 备份最怕的是“看起来成功，但真的灾难降临时却恢复失败”。
-> 
-> 我强烈建议至少定期做一次**恢复演练**：把最近的一份 SQL 备份导入到一个独立的**临时库**中，而不是直接覆盖生产库。以此验证最底层的“备份文件能否被 PostgreSQL 正常导入”问题。
-{: .prompt-warning }
+**恢复演练：** 备份最怕的是“看起来成功，但真的灾难降临时却恢复失败”。建议定期把最近的一份 SQL 备份导入到独立的**临时库**中，而不是直接覆盖生产库，用来验证最底层的“备份文件能否被 PostgreSQL 正常导入”。
 
 ```bash
 cd /opt/example/example-backend
@@ -248,14 +237,11 @@ example-prod-backups/
       SHA256SUMS
 ```
 
-> **最小权限原则 (Least Privilege)**
-> 
-> 创建 R2 API token 时，务必遵守最小权限原则：
-> - 仅赋予该备份 Bucket 的 `Object Read & Write` 权限。
-> - 坚决避免使用全局 Account Token。
-> - 绝对不要将 Token 明文写入 Git 仓库。
-> - `Secret Access Key` 只应该存放到密码管理器及受限的服务器环境文件中。
-{: .prompt-warning }
+**最小权限原则（Least Privilege）：** 创建 R2 API token 时务必遵守以下规则：
+- 仅赋予该备份 Bucket 的 `Object Read & Write` 权限。
+- 坚决避免使用全局 Account Token。
+- 绝对不要将 Token 明文写入 Git 仓库。
+- `Secret Access Key` 只应该存放到密码管理器及受限的服务器环境文件中。
 
 安装 rclone：
 
@@ -420,10 +406,7 @@ log "Backup job completed successfully"
 ```
 {: file="/opt/example/scripts/backup-r2.sh" }
 
-> **备份策略建议**
-> 
-> 如果启用 R2 备份脚本，通常不需要再同时执行本机自动备份脚本。因为 R2 脚本本身也会在本机快照目录中保留最近几天的完整备份文件。
-{: .prompt-info }
+**备份策略建议：** 如果启用 R2 备份脚本，通常不需要再同时执行本机自动备份脚本。因为 R2 脚本本身也会在本机快照目录中保留最近几天的完整备份文件。
 
 赋予权限并手动执行：
 
@@ -1034,10 +1017,7 @@ chmod 700 /opt/example/scripts/restore-prod-from-r2.sh
   --timestamp 2026-05-29_030000
 ```
 
-> **最佳实践**
-> 
-> 如果不指定 `--timestamp`，脚本会默认选择 R2 指定前缀下最新的时间戳目录。但在出现事故需要恢复时，强烈建议**显式指定时间戳**，避免不小心选中包含被污染数据的较新备份点。
-{: .prompt-tip }
+**最佳实践：** 如果不指定 `--timestamp`，脚本会默认选择 R2 指定前缀下最新的时间戳目录。但在事故恢复时，强烈建议**显式指定时间戳**，避免选中包含被污染数据的较新备份点。
 
 ## 九、恢复后的检查
 
@@ -1079,7 +1059,7 @@ ls -lah /opt/example/example-backend | grep uploads.before-restore
 9. **日志脱敏防范**：切勿在备份日志任务中 echo 或是明文打印涉及秘钥的环境变量。
 10. **强一致性要求**：如果业务本身有着银行级别的强一致性要求，则数据库与上传目录需要升级至更严苛的基于块快照 (Volume Snapshot) 结合应用停写机制的灾备方式。
 
-## 十一/适用场景
+## 十一、适用场景
 
 这套方案主要针对并非常适合以下情况：
 
@@ -1097,7 +1077,4 @@ ls -lah /opt/example/example-backend | grep uploads.before-restore
 2. 本机驻留可用作迅速退闪的快照包；Cloudflare R2 保留可以抵御物理宕机长线灾难备份。
 3. 定期将这份备份档实际导入另一台空白试验库，证明**“该备份的确可以用”**。
 
-> **写在最后**
-> 
-> 备份的最终价值从来就不在于每天产生了多少体积的打包文件，而在于在致命事故降临（如删库跑路、磁盘报废）的那个凌晨里，你究竟能不能凭借键盘，既冷静、且可重复、更明确可验证地把所有的身家性命给稳稳恢复回来。
-{: .prompt-tip }
+**写在最后：** 备份的价值不在于每天产生了多少打包文件，而在于致命事故降临（如误删数据库、磁盘报废）的那个凌晨里，你能否凭借键盘，既冷静、且可重复、更明确可验证地把系统稳稳恢复回来。
