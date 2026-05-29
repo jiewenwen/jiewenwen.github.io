@@ -16,10 +16,7 @@ tags: [postgresql, docker-compose, backup, restore, rclone, cloudflare-r2]
 
 本文整理了一套我在管理小型 Docker Compose 后端架构中长期使用的备份与恢复落地实践。以极简的结构示范：后端由 `app` 与 `db` 两个服务容器构成，数据库为 `PostgreSQL`，普通用户上传的多媒体资产放置于当前工作目录下的 `uploads/`。针对远端存放灾备库，将采用极具性价比的 Cloudflare R2（你完全可以平行替换为任何兼容标准 S3 的对象存储引擎）。
 
-> 为避免暴露真实业务架构信息，文中所提及的项目名称、目标路径、存储 Bucket、数据库库名、环境域名以及具体的演练时间戳全部做过泛化与脱敏处理。
-{: .prompt-info }
-
-## 目录与约定
+## 一、目录与约定
 
 本文使用下面这些占位路径：
 
@@ -28,7 +25,7 @@ APP_DIR="/opt/example/example-backend"
 BACKUP_DIR="/opt/example/backups"
 RESTORE_ROOT="/opt/example/restore"
 COMPOSE_FILE="docker-compose.prod.yml"
-~~~
+```
 
 Docker Compose 中假设有两个服务：
 
@@ -46,7 +43,7 @@ sudo mkdir -p /opt/example/backups /opt/example/scripts /opt/example/restore
 sudo chown -R deploy:deploy /opt/example/backups /opt/example/scripts /opt/example/restore
 ```
 
-## 本机数据库备份
+## 二、本机数据库备份
 
 最基础的 PostgreSQL 备份可以直接用 `pg_dump`：
 
@@ -69,7 +66,7 @@ docker compose -f docker-compose.prod.yml exec -T db sh -lc \
 > 这段命令故意放在单引号里，让 `$POSTGRES_USER` 和 `$POSTGRES_DB` 在 `db` 容器内部展开，而不是在宿主机上展开。如果写成双引号形式且宿主机缺乏同名变量，PostgreSQL 客户端可能会退回使用当前系统用户（例如 `root`）直接连接，最后报出 `role "root" does not exist` 错误。因此，在容器化部署执行备份时，更推荐明确在数据库容器内部读取对应环境变量。
 {: .prompt-warning }
 
-## uploads 目录备份
+## 三、uploads 目录备份
 
 很多小型后端的数据不只在数据库里。用户头像、图片、附件、导入文件等，通常还会落在本机目录中。
 
@@ -86,7 +83,7 @@ tar -C /opt/example/example-backend \
 > 这里使用 `tar -C APP_DIR uploads`，备份包里的路径会是相对路径 `uploads/...`，而不是宿主机上的绝对路径 `/opt/example/example-backend/uploads/...`。这样以后迁移到新服务器、新文件路径时，解压会更加灵活，避免路径覆盖和层级多余。
 {: .prompt-tip }
 
-## 先做不覆盖生产库的恢复演练
+## 四、先做不覆盖生产库的恢复演练
 
 > **不可忽视的恢复演练**
 > 
@@ -124,7 +121,7 @@ docker compose -f docker-compose.prod.yml exec -T db sh -lc \
 
 这里的目标不是验证所有业务数据完全正确，而是先把最低层的“备份文件能不能导入”验证掉。
 
-## 每日本机自动备份脚本
+## 五、每日本机自动备份脚本
 
 手工命令只适合验证流程。真正上线后，应该把它变成自动任务。
 
@@ -209,7 +206,7 @@ crontab -e
 
 本机备份能防误删、误改、升级失败，但不能防整台服务器损坏、系统盘异常、账号被误删等问题。因此生产环境最好再做一份异地备份。
 
-## 远端备份到 Cloudflare R2
+## 六、远端备份到 Cloudflare R2
 
 Cloudflare R2 可以当作一个兼容 S3 的对象存储，用来保存备份压缩包。这里它只作为备份仓库，不改变应用运行时的文件存储方式：
 
@@ -450,7 +447,7 @@ tail -n 100 /opt/example/backups/backup-r2.log
 rclone lsf r2-backup:example-prod-backups/prod/
 ```
 
-## 本机生产恢复脚本
+## 七、本机生产恢复脚本
 
 真正恢复生产库是破坏性操作，所以我不建议只靠几条手工命令完成。更好的方式是写成脚本，并且加入以下保护：
 
@@ -741,7 +738,7 @@ chmod 700 /opt/example/scripts/restore-prod.sh
 /opt/example/scripts/restore-prod.sh --skip-uploads
 ```
 
-## 从 R2 拉回并恢复
+## 八、从 R2 拉回并恢复
 
 从 R2 恢复时，我不希望脚本直接把远端文件灌进生产库。更稳妥的流程是：
 
@@ -1042,7 +1039,7 @@ chmod 700 /opt/example/scripts/restore-prod-from-r2.sh
 > 如果不指定 `--timestamp`，脚本会默认选择 R2 指定前缀下最新的时间戳目录。但在出现事故需要恢复时，强烈建议**显式指定时间戳**，避免不小心选中包含被污染数据的较新备份点。
 {: .prompt-tip }
 
-## 恢复后的检查
+## 九、恢复后的检查
 
 恢复完成后，不要只看脚本是否退出成功，还要检查应用状态：
 
@@ -1067,7 +1064,7 @@ ls -lah /opt/example/example-backend | grep uploads.before-restore
 
 不要在刚恢复完成后立刻删除旧目录。最好等确认新数据没有问题，再清理这些回滚用的目录。
 
-## 安全注意事项
+## 十、安全注意事项
 
 在实施这套方案时，请特别注意以下边界与红线：
 
@@ -1082,7 +1079,7 @@ ls -lah /opt/example/example-backend | grep uploads.before-restore
 9. **日志脱敏防范**：切勿在备份日志任务中 echo 或是明文打印涉及秘钥的环境变量。
 10. **强一致性要求**：如果业务本身有着银行级别的强一致性要求，则数据库与上传目录需要升级至更严苛的基于块快照 (Volume Snapshot) 结合应用停写机制的灾备方式。
 
-## 适用场景
+## 十一/适用场景
 
 这套方案主要针对并非常适合以下情况：
 
