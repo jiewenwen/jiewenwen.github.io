@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "一次小型后端的备份与恢复实践：PostgreSQL、uploads 与 Cloudflare R2"
+title: "一次小型app后端的备份与恢复实践"
 date: 2026-05-29 12:00:00 +0800
 categories: [Development]
 tags: [postgresql, docker-compose, backup, restore, rclone, cloudflare-r2]
