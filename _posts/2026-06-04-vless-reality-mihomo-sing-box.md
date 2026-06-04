@@ -5,7 +5,7 @@ categories: [Network]
 tags: [sing-box, vless, reality, vps, proxy, Mihomo, Clash]
 ---
 
-最近我在服务器上部署了基于 **VLESS + Vision + REALITY** 的代理节点。相比传统 TLS 节点，REALITY 不依赖自有域名证书，也不要求服务端暴露一个完整网站，更适合个人单节点使用。
+最近我在服务器上部署了基于 **VLESS + Vision + REALITY** 的代理节点。相比传统 TLS 节点，REALITY 不依赖自有域名证书，也不要求服务端暴露一个完整网站，更适合个人单节点使用。服务器配置可参考：https://blog.flynoa.cc/posts/sing-box-vless-reality/。
 
 这篇文章只记录客户端侧配置，主要覆盖两类场景：
 
