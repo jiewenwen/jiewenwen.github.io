@@ -59,15 +59,9 @@ dns:
   nameserver:
     - https://cloudflare-dns.com/dns-query
     - https://dns.google/dns-query
-  fallback:
-    - tls://1.1.1.1
-    - tls://8.8.8.8
   proxy-server-nameserver:
     - https://cloudflare-dns.com/dns-query
     - https://dns.google/dns-query
-  fallback-filter:
-    geoip: true
-    geoip-code: CN
   fake-ip-filter:
     - "*.lan"
     - "*.local"
@@ -134,7 +128,13 @@ rules:
 servername: www.bing.com
 ```
 
-`packet-encoding: xudp` 适合 Xray 服务端的 UDP 转发；如果完全不需要 UDP，可以删掉这一行，并把 `udp` 改成 `false`。
+这里容易混淆的是 `network: tcp`、`udp: true` 和 `packet-encoding: xudp`：
+
+- `network: tcp` 表示 VLESS 到服务端的传输层是 TCP，也就是 URL 中的 `type=tcp`。
+- `udp: true` 表示这个代理节点允许客户端应用产生的 UDP 流量，例如 QUIC、HTTP/3、游戏或部分 DNS 流量。
+- `packet-encoding: xudp` 表示这些 UDP 包会用 XUDP 方式封装，再通过 VLESS 连接转发；它不是把 VLESS 传输层改成 UDP。
+
+如果只需要 TCP 代理，可以把 `udp` 改成 `false`，并删除 `packet-encoding: xudp`。如果需要 UDP 转发，保留这两项，并确认服务端兼容 XUDP。
 
 `skip-cert-verify: true` 是 REALITY 节点在 Mihomo 中的常见写法，安全性主要依赖 `public-key`、`short-id` 与 REALITY 握手校验。普通 TLS 节点不要直接照抄这个值。
 
@@ -264,6 +264,7 @@ servername: www.bing.com
 - 其他流量默认走 `proxy`，也就是 VLESS + Vision + REALITY 节点。
 - DNS 查询由 sing-box 接管，并统一使用 Cloudflare / Google DNS。
 - 远程规则集会被缓存到 `cache_file`，避免每次启动都重新下载。
+- `packet_encoding: "xudp"` 是 UDP 包编码，不改变 VLESS 的 TCP 传输层；不需要 UDP 转发时可以删除这一项。
 
 如果你的 `server` 填的是域名，`domain_resolver: "cloudflare"` 会让 sing-box 使用 Cloudflare DNS 解析节点域名。更稳妥的做法是直接填写 VPS IP，避免节点域名解析异常导致无法启动代理链路。
 
@@ -406,10 +407,11 @@ Android 图形客户端会通过 VpnService 管理 TUN 接口，`interface_name`
 | `pbk=xxx` | `reality-opts.public-key` | `tls.reality.public_key` |
 | `sid=xxx` | `reality-opts.short-id` | `tls.reality.short_id` |
 | `type=tcp` | `network: tcp` | 不写 `transport`，默认就是 TCP |
+| UDP 转发 | `udp` + `packet-encoding` | `packet_encoding` |
 
 最容易填错的是 `servername`、`public_key`、`short_id` 和 `flow`。其中 `public_key` 必须是 REALITY 公钥，不是服务端私钥。
 
-注意：sing-box 的 `network` 字段表示这个出站允许处理 `tcp`、`udp` 哪类流量，不等同于 VLESS URL 里的 `type=tcp`。如果想保留 UDP 转发能力，通常不要把 sing-box 的 `network` 固定为 `tcp`。
+注意：sing-box 的 `network` 字段表示这个出站允许处理 `tcp`、`udp` 哪类业务流量，不等同于 VLESS URL 里的 `type=tcp`。如果想保留 UDP 转发能力，通常不要把 sing-box 的 `network` 固定为 `tcp`。
 
 ## **6. 检查与排错**
 
