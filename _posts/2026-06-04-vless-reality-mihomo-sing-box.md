@@ -128,6 +128,8 @@ rules:
 servername: www.bing.com
 ```
 
+`default-nameserver` 是引导 DNS，用来解析 `nameserver` 和 `proxy-server-nameserver` 里的 DNS 服务域名，例如 `cloudflare-dns.com` 和 `dns.google`。它必须写成 IP，只有在启动 DNS 查询链路时使用，不是普通网站域名的主要解析策略。
+
 这里容易混淆的是 `network: tcp`、`udp: true` 和 `packet-encoding: xudp`：
 
 - `network: tcp` 表示 VLESS 到服务端的传输层是 TCP，也就是 URL 中的 `type=tcp`。
