@@ -134,7 +134,7 @@ jobs:
 
     steps:
       - name: Checkout target branch
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
         with:
           ref: ${{ env.TARGET_BRANCH }}
           fetch-depth: 0
@@ -155,7 +155,6 @@ jobs:
 
       - name: Merge upstream into fork
         run: |
-          git checkout ${{ env.TARGET_BRANCH }}
           git merge --ff-only upstream/${{ env.UPSTREAM_BRANCH }}
 
       - name: Push changes
@@ -197,6 +196,8 @@ git merge --ff-only upstream/main
 `--ff-only` 的意思是：只有在可以快进合并（fast-forward）的情况下才执行合并。
 
 这样做比较安全。如果你的 fork 没有自己改代码，只是想保持和原仓库一致，`--ff-only` 非常适合。
+
+> **注意**：如果你的 fork 已经包含了自己的提交（与上游分叉），`--ff-only` 会导致 workflow 运行失败。这种情况需要把 `--ff-only` 改成普通的 `git merge`，或者手动在本地解决冲突后再推送。
 
 如果你的 fork 有自己的提交，并且和上游产生了分叉，`--ff-only` 会失败。它不会强行生成 merge commit，也不会覆盖你的代码。这是一种保守但安全的同步策略。
 
