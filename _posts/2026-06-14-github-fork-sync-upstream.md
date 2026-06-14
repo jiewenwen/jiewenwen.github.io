@@ -111,6 +111,7 @@ git push origin main
 
 填入以下内容：
 
+{% raw %}
 ```yaml
 name: Sync fork with upstream
 
@@ -161,6 +162,7 @@ jobs:
         run: |
           git push origin ${{ env.TARGET_BRANCH }}
 ```
+{% endraw %}
 
 需要修改的地方主要有三个环境变量：
 
@@ -216,15 +218,19 @@ git merge --ff-only upstream/main
 
 如果你仍然想自动合并，可以把：
 
+{% raw %}
 ```bash
 git merge --ff-only upstream/${{ env.UPSTREAM_BRANCH }}
 ```
+{% endraw %}
 
 改成：
 
+{% raw %}
 ```bash
 git merge upstream/${{ env.UPSTREAM_BRANCH }} --no-edit
 ```
+{% endraw %}
 
 但是不建议一开始就这样做，因为它可能自动创建 merge commit，让仓库历史变复杂。
 
@@ -422,20 +428,24 @@ GH_PAT
 
 示例：
 
+{% raw %}
 ```yaml
 - name: Checkout target branch
-  uses: actions/checkout@v6
+  uses: actions/checkout@v4
   with:
     ref: ${{ env.TARGET_BRANCH }}
     fetch-depth: 0
     token: ${{ secrets.GH_PAT }}
 ```
+{% endraw %}
 
 添加 upstream 时也可以写成：
 
+{% raw %}
 ```bash
 git remote add upstream https://x-access-token:${{ secrets.GH_PAT }}@github.com/${{ env.UPSTREAM_REPOSITORY }}.git
 ```
+{% endraw %}
 
 注意：不要把 token 直接写进 workflow 文件，必须放进 GitHub Secrets。
 
@@ -480,6 +490,7 @@ GitHub fork 仓库默认不会自动同步上游更新。
 
 推荐 workflow 结构是：
 
+{% raw %}
 ```yaml
 name: Sync fork with upstream
 
@@ -501,7 +512,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:
           ref: ${{ env.TARGET_BRANCH }}
           fetch-depth: 0
@@ -513,11 +524,11 @@ jobs:
           git remote add upstream https://github.com/${{ env.UPSTREAM_REPOSITORY }}.git
           git fetch upstream ${{ env.UPSTREAM_BRANCH }}
 
-          git checkout ${{ env.TARGET_BRANCH }}
           git merge --ff-only upstream/${{ env.UPSTREAM_BRANCH }}
 
           git push origin ${{ env.TARGET_BRANCH }}
 ```
+{% endraw %}
 
 这套方案适合大多数只想同步上游更新的 fork 仓库。
 
