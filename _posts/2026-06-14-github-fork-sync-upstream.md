@@ -3,7 +3,7 @@ layout: post
 title: "GitHub Fork 仓库如何自动同步上游更新"
 date: 2026-06-14 00:00:00 +0800
 categories: [Development]
-tags: [GitHub Actions, Fork, Git, 自动同步]
+tags: [GitHub Actions, Fork, git, 自动同步]
 ---
 
 很多人在 GitHub 上 fork 一个开源仓库之后，会以为自己的 fork 会自动跟随原仓库更新。实际上，**GitHub 的 fork 默认不会自动同步上游仓库**。原仓库更新后，你的 fork 不会自动变化，除非手动同步或配置自动同步任务。
