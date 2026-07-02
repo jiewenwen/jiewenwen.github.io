@@ -2,7 +2,7 @@
 layout: post
 title: "如何让 Codex 更稳定地执行长任务和大任务"
 date: 2026-07-02 00:00:00 +0800
-categories: [Development]
+categories: [AI]
 tags: [Codex, OpenAI, AI编程, AGENTS.md, 长任务, CLI, 工程化]
 ---
 
