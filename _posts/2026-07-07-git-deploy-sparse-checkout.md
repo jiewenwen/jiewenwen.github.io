@@ -14,7 +14,7 @@ tags: [git, sparse-checkout, deploy, ci-cd]
 
 ------
 
-## 问题场景
+## 一、问题场景
 
 假设项目目录结构如下：
 
@@ -42,8 +42,6 @@ my-project/
 
 核心诉求就是：**本地仓库保持完整，但服务器工作区只保留部署需要的文件。**
 
-------
-
 那么，为什么 `.gitignore` 不适合这个场景
 
 假设你已经提交过 `docs/`：
@@ -68,7 +66,7 @@ docs/
 
 ------
 
-## 推荐方案：Git sparse checkout
+## 二、推荐方案：Git sparse checkout
 
 Git sparse checkout 的作用是：**让工作区只显示仓库中的一部分文件。**
 
@@ -175,7 +173,7 @@ git pull
 
 ------
 
-## 实操指南
+## 三、实操指南
 
 ### 新仓库初始化
 
@@ -267,7 +265,7 @@ git sparse-checkout disable
 
 ------
 
-## 注意事项
+## 四、注意事项
 
 ### 1. sparse checkout 只影响工作区，不等于删除仓库内容
 
@@ -299,7 +297,7 @@ sparse checkout 适合"服务器通过 `git pull` 部署"的模式。但更规�
 
 ------
 
-## 其他可选方案
+## 五、其他可选方案
 
 ### 部署分支
 
@@ -351,7 +349,7 @@ rsync -av --delete \
 
 ------
 
-## 总结
+## 六、总结
 
 服务器部署时不想拉取文档或其他非运行文件，不能简单依赖 `.gitignore`——它只能忽略未被 Git 跟踪的新文件，不能阻止服务器拉取已经提交进仓库的内容。
 
@@ -379,7 +377,7 @@ git sparse-checkout set \
 
 ------
 
-## 参考资料
+## 七、参考资料
 
 - [Git 官方文档：git-sparse-checkout](https://git-scm.com/docs/git-sparse-checkout)
 - [Git 官方文档：sparse-checkout](https://git-scm.com/docs/git-sparse-checkout#_sparse_checkout)
