@@ -44,7 +44,7 @@ my-project/
 
 ------
 
-### 为什么 `.gitignore` 不适合这个场景
+那么，为什么 `.gitignore` 不适合这个场景
 
 假设你已经提交过 `docs/`：
 
@@ -110,7 +110,7 @@ git pull
 
 此后，服务器工作区中就不会出现 `docs/` 目录。
 
-#### 为什么这里要使用 `--no-cone`
+那么，**为什么这里要使用 `--no-cone`**
 
 Git sparse checkout 默认使用 **cone mode**。cone mode 更推荐用于"只选择某些目录"的场景，例如：
 
