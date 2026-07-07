@@ -16,6 +16,8 @@ tags: [Mac, System Data, Xcode, Docker]
 
 这篇文章提供一套可复用、相对稳妥的排查与清理流程。先查清，再删除。所有 `rm -rf` 命令执行前，都建议二次确认路径。
 
+可参考脚本：https://github.com/jiewenwen/maccleaner
+
 ---
 
 ## 一、先建立正确认知
