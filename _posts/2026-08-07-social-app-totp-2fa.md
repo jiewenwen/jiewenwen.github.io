@@ -1,0 +1,2173 @@
+---
+layout: post
+title: "给社交 App 加上 Authenticator 2FA：一套生产可用的 TOTP 技术方案"
+date: 2026-08-07 21:45:00 +0800
+categories: [Development]
+tags: [2FA, TOTP, Authenticator, MFA, Security, App, Backend]
+---
+
+现在很多 App 都支持这样的登录方式：
+
+```text
+账号 + 密码
+     ↓
+Authenticator 6 位验证码
+     ↓
+登录成功
+```
+
+用户可以使用 Google Authenticator、Microsoft Authenticator、1Password、Authy 等应用生成动态验证码。
+
+表面上看，这个功能似乎就是：
+
+> 生成一个二维码，然后让用户输入 6 位验证码。
+
+但真正做成生产环境可用的 2FA 系统后，会发现 **TOTP 算法本身反而是最简单的一部分**。
+
+真正需要处理的是：
+
+- TOTP Secret 如何保存
+- 登录过程中什么时候签发 Token
+- 如何防止验证码重复使用
+- 如何限制暴力尝试
+- 用户换手机怎么办
+- Recovery Code 怎么设计
+- 用户关闭 2FA 怎么保证安全
+- OAuth、密码重置等流程能不能绕过 MFA
+
+这篇文章整理一套适用于 **前后端分离社交 App** 的完整 TOTP 2FA 技术方案。
+
+全文分为七个部分：
+
+1. 理解 TOTP：要集成什么、参数怎么选、整体架构
+2. 开启 2FA：二维码、Manual Key、确认绑定
+3. 登录流程与防重放：MFA Challenge、Replay 防护
+4. Secret 安全与暴力防护：加密存储、日志脱敏、限流
+5. 账号恢复与关闭 2FA：恢复码、重置、更换
+6. 多入口、数据模型与 API
+7. 工程实践与上线检查：测试、最小版本、最终方案
+
+---
+
+# 第一部分：理解 TOTP
+
+## 一、我们到底要集成什么？
+
+首先有一个很容易误解的问题：
+
+> 要支持 Google Authenticator，是不是要集成 Google Authenticator SDK？
+
+答案是：**不需要。**
+
+Google Authenticator、Microsoft Authenticator、1Password、Authy 等应用，本质上都遵循标准的 TOTP 协议（RFC 6238），它们只是 Secret 的“客户端持有者”和验证码生成器。
+
+我们真正需要实现的是：
+
+```text
+RFC 6238 TOTP
+```
+
+整个关系其实非常简单：
+
+```text
+我们的服务器
+    │
+    │ 生成 TOTP Secret
+    ▼
+二维码 / Manual Key
+    │
+    ▼
+Authenticator
+    │
+    │ 每 30 秒生成 6 位验证码
+    ▼
+用户输入验证码
+    │
+    ▼
+我们的服务器验证
+```
+
+Authenticator 不需要调用我们的 API。
+
+它甚至不需要联网。
+
+服务器和 Authenticator 只需要：
+
+```text
+相同 Secret
++
+相同时间
++
+相同 TOTP 参数
+```
+
+就能计算出相同的验证码。
+
+因此，我们并不是在“集成 Google Authenticator”，而是在：
+
+> **实现一个兼容 RFC 6238 的标准 TOTP 服务。**
+
+### 为什么不选短信 / 邮件验证码？
+
+顺带比较一下常见的 2FA 方式，方便团队对齐预期：
+
+| 方式 | 优点 | 缺点 |
+|---|---|---|
+| TOTP（本文） | 标准免费、离线可用、生态兼容性最好 | 无法抵御实时钓鱼（同一页面骗取密码和验证码） |
+| SMS OTP | 用户熟悉 | 可被 SIM 换卡 / SS7 拦截，成本高、有延迟 |
+| Email OTP | 实现简单 | 邮箱本身就可能被攻破，安全性弱 |
+| Push 认证 | 体验好 | 依赖厂商推送链路，需要额外基础设施 |
+| WebAuthn / Passkey | 可抗钓鱼 | 依赖平台生态，可作后续演进 |
+
+TOTP 是当前**性价比最高、覆盖面最广**的主 2FA 方案，也是本方案第一阶段的选择。
+
+---
+
+## 二、推荐的 TOTP 参数
+
+为了获得最好的 Authenticator 兼容性，可以使用：
+
+```yaml
+type: TOTP
+algorithm: SHA1
+digits: 6
+period: 30
+secretLength: 20 bytes
+encoding: Base32
+validationWindow: [-1, 0, +1]
+```
+
+也就是：
+
+| 参数 | 推荐值 |
+|---|---|
+| 算法 | HMAC-SHA1 |
+| 验证码长度 | 6 位 |
+| 更新时间 | 30 秒 |
+| Secret | 160 bit |
+| Secret 编码 | Base32 |
+| 时间容差 | 前后各 1 个窗口 |
+
+这里使用 SHA1 并不是用 SHA1 存储用户密码。
+
+TOTP 的 SHA1 是协议的一部分（RFC 4226 / RFC 6238 的默认算法），所有主流 Authenticator 都兼容它。
+
+密码本身仍然应该使用：
+
+```text
+Argon2id
+bcrypt
+scrypt
+```
+
+等密码哈希算法存储。
+
+### 关于 Base32 的细节
+
+- Base32 只包含 `A-Z` 和 `2-7`，不含容易混淆的字符；
+- 解析时**忽略大小写**、**忽略空格和连字符**（所以 Manual Key 里加空格分组完全没问题）；
+- 末尾的 `=` 是补齐符，一般可以省略，但解析器都应该能处理；
+- 不要用 Base64 存 Secret——绝大多数 Authenticator 只认 Base32。
+
+---
+
+## 三、整体架构
+
+对于一个典型的社交 App，可以设计成：
+
+```text
+┌──────────────────────────────┐
+│          Mobile App          │
+│                              │
+│ QR / OTP / Recovery Code     │
+└──────────────┬───────────────┘
+               │ HTTPS
+               ▼
+┌──────────────────────────────┐
+│         Auth Service         │
+│                              │
+│ Password Authentication      │
+│ TOTP                         │
+│ MFA Challenge                │
+│ Recovery Code                │
+│ Rate Limit                   │
+│ Security Audit               │
+└───────┬──────────┬───────────┘
+        │          │
+        ▼          ▼
+   PostgreSQL    Redis
+        │
+        ▼
+       KMS
+```
+
+其中几个组件分别负责：
+
+### 数据库
+
+保存：
+
+- 用户 MFA 状态
+- 加密后的 TOTP Secret
+- Recovery Code Hash
+- MFA 安全审计记录
+
+### Redis
+
+保存：
+
+- 登录 MFA Challenge
+- 验证失败次数
+- IP / Account Rate Limit
+- 短生命周期认证状态
+
+### KMS / Key Vault
+
+用于保护：
+
+```text
+TOTP Secret
+```
+
+例如：
+
+- AWS KMS
+- Google Cloud KMS
+- Azure Key Vault
+- 企业 HSM
+
+> 架构上 Auth Service 可以是多个实例（多节点 + 负载均衡），MFA Challenge 和限流状态放在 Redis 里共享即可；Secret 的加解密统一走 KMS，密钥不落本地磁盘。
+
+---
+
+# 第二部分：开启 2FA（Enrollment）
+
+## 四、前端和后端分别负责什么？
+
+这个边界需要提前确定。
+
+### 前端
+
+前端负责：
+
+```text
+展示二维码
+显示 Manual Key
+接收用户输入的 6 位验证码
+调用 API
+展示 2FA 状态
+展示 Recovery Code
+```
+
+前端**不应该负责最终 TOTP 验证**。
+
+### 后端
+
+后端负责：
+
+```text
+生成 Secret
+生成 otpauth URI
+加密 Secret
+验证 TOTP
+维护 MFA Challenge
+防暴力攻击
+防验证码 Replay
+管理 Recovery Code
+关闭 / 更换 MFA
+```
+
+因此整个 MFA 的安全边界应该位于后端。
+
+---
+
+## 五、开启 2FA 的完整流程
+
+用户进入：
+
+```text
+Settings
+→ Security
+→ Two-Factor Authentication
+→ Enable
+```
+
+接下来不要立刻生成二维码。
+
+开启 MFA 属于敏感操作，所以建议首先要求用户重新验证身份。
+
+例如：
+
+```text
+重新输入密码
+```
+
+然后调用：
+
+```http
+POST /api/v1/security/mfa/totp/enroll
+Authorization: Bearer <accessToken>
+```
+
+Request：
+
+```json
+{
+  "password": "********"
+}
+```
+
+后端执行：
+
+```text
+验证 Access Token
+      ↓
+验证用户密码
+      ↓
+生成随机 Secret
+      ↓
+加密 Secret
+      ↓
+创建 PENDING MFA Factor
+      ↓
+生成 otpauth URI
+      ↓
+返回给 App
+```
+
+这里有一个非常重要的状态：
+
+```text
+PENDING
+```
+
+不能在二维码刚生成后就认为用户已经开启 2FA。
+
+因为用户可能：
+
+- 没有扫描二维码
+- 中途关闭 App
+- Authenticator 配置失败
+- 网络断开
+
+所以正确状态应该是：
+
+```text
+PENDING
+   ↓
+用户输入第一个 TOTP
+   ↓
+验证成功
+   ↓
+ACTIVE
+```
+
+另外两点容易遗漏：
+
+- **PENDING 状态要有时效**：一般 10～15 分钟后自动过期，防止留下大量永远不生效的“半成品”Factor，也避免攻击者长期持有一个待确认的 Enrollment；
+- **同一用户同时只允许一个 PENDING**：重复点击“开启”时，要么复用旧 Enrollment，要么作废旧的重开，避免状态混乱。
+
+---
+
+## 六、如何生成 Secret？
+
+Secret 必须使用：
+
+```text
+Cryptographically Secure Random Number Generator
+```
+
+例如：
+
+```text
+20 bytes
+=
+160 bit
+```
+
+伪代码：
+
+```text
+secretBytes = secureRandom(20)
+
+secret = Base32(secretBytes)
+```
+
+不要这样做：
+
+```text
+MD5(userId)
+
+UUID + timestamp
+
+Math.random()
+
+当前时间
+```
+
+（从任何与用户相关的数据派生 Secret，都会降低熵，甚至导致可预测。）
+
+不同语言应该使用对应的密码学随机 API，例如：
+
+```text
+Node.js       crypto.randomBytes
+Java          SecureRandom
+Python        secrets
+Go            crypto/rand
+```
+
+---
+
+## 七、Authenticator 二维码是什么？
+
+Authenticator 扫描的二维码，本质上只是一个：
+
+```text
+otpauth://
+```
+
+URI。
+
+格式类似：
+
+```text
+otpauth://totp/MySocialApp:user@example.com
+?secret=XXXXXXXX
+&issuer=MySocialApp
+&algorithm=SHA1
+&digits=6
+&period=30
+```
+
+实际 URI 中不能换行，并且字段应该正确 URL Encode。
+
+例如：
+
+```text
+issuer = MySocialApp
+account = john@example.com
+```
+
+注意几点：
+
+- **Label 格式是 `issuer:account`**，例如 `MySocialApp:john@example.com`；
+- **`issuer` 参数建议显式带上**：Google Authenticator 等应用要求 Label 里的 issuer 与 `issuer` 参数一致，否则可能拒绝识别或显示混乱；
+- 账号名包含 `@`、空格、冒号等特殊字符时，必须 URL Encode；
+- `algorithm`、`digits`、`period` 是可选项，但建议显式写上，避免个别客户端用默认值产生歧义。
+
+Authenticator 扫描后，就获得了：
+
+```text
+Secret
+Algorithm
+Digits
+Period
+```
+
+之后即可自行生成动态验证码。
+
+---
+
+## 八、二维码可以前端生成吗？
+
+可以。
+
+后端可以只返回：
+
+```json
+{
+  "enrollmentId": "mfa_enroll_018fa57d",
+  "otpauthUri": "otpauth://totp/...",
+  "manualKey": "JBSW Y3DP EHPK 3PXP",
+  "expiresIn": 600
+}
+```
+
+前端再通过二维码库渲染。
+
+例如 Flutter：
+
+```text
+qr_flutter
+```
+
+React Native：
+
+```text
+react-native-qrcode-svg
+```
+
+也可以由后端生成 PNG（返回 `Content-Type: image/png`），两种方案都可以。
+
+但要注意：
+
+> **二维码本身就是 Secret。**
+
+所以不能把二维码当普通图片处理。
+
+不要把它：
+
+- 上传 CDN
+- 存对象存储
+- 写入日志
+- 写入 APM
+- 写入 Analytics
+- 长期缓存
+
+HTTP Response 最好增加：
+
+```http
+Cache-Control: no-store
+Pragma: no-cache
+```
+
+---
+
+## 九、为什么一定要提供 Manual Key？
+
+如果用户正在自己的手机里开启 2FA：
+
+```text
+当前手机
+├── Social App
+└── Authenticator
+```
+
+他没法很方便地拿摄像头扫描自己屏幕上的二维码。
+
+因此开启页面最好同时展示：
+
+```text
+Setup Key:
+
+ABCD EFGH IJKL MNOP
+```
+
+并提供：
+
+```text
+Copy
+```
+
+按钮。
+
+不建议告诉用户：
+
+> 截图之后再去 Authenticator 扫描。
+
+因为截图可能自动同步到：
+
+- iCloud Photos
+- Google Photos
+- 第三方云盘
+
+而二维码里包含的其实是永久 TOTP Secret。
+
+---
+
+## 十、用户必须输入一次验证码确认绑定
+
+用户扫码完成以后，让他输入 Authenticator 当前显示的验证码：
+
+```text
+[ _ _ _ _ _ _ ]
+```
+
+调用：
+
+```http
+POST /api/v1/security/mfa/totp/enroll/confirm
+```
+
+Request：
+
+```json
+{
+  "enrollmentId": "mfa_enroll_018fa57d",
+  "code": "123456"
+}
+```
+
+后端：
+
+```text
+查询 PENDING Enrollment
+      ↓
+检查是否过期
+      ↓
+解密 Secret
+      ↓
+验证 TOTP
+      ↓
+成功
+      ↓
+Factor → ACTIVE
+      ↓
+生成 Recovery Codes
+```
+
+只有做到这一步，系统才能确定：
+
+> 用户确实已经把 Secret 正确保存进 Authenticator。
+
+另外：
+
+- **`enrollmentId` 一次性使用**：确认成功或失败后都应立即作废；
+- **确认接口同样要限流**：防止攻击者拿着一个 enrollmentId 暴力猜 6 位验证码；
+- 确认成功后，建议立刻引导用户查看 Recovery Code（见第五部分）。
+
+---
+
+# 第三部分：登录流程与防重放
+
+## 十一、登录流程应该怎么改？
+
+这是整个 MFA 实现中最容易出现严重安全漏洞的地方之一。
+
+原来的登录：
+
+```text
+Password
+   ↓
+Access Token
++
+Refresh Token
+```
+
+开启 MFA 后应该变成：
+
+```text
+Password
+   ↓
+MFA Enabled?
+   │
+   ├── No
+   │    ↓
+   │   Token
+   │
+   └── Yes
+        ↓
+   MFA Challenge
+        ↓
+      TOTP
+        ↓
+      Token
+```
+
+第一步：
+
+```http
+POST /api/v1/auth/login
+```
+
+如果用户没有开启 MFA：
+
+```json
+{
+  "accessToken": "...",
+  "refreshToken": "..."
+}
+```
+
+如果开启了：
+
+```json
+{
+  "authenticationStatus": "MFA_REQUIRED",
+  "mfaChallenge": "mfac_018fa72d",
+  "methods": [
+    "TOTP",
+    "RECOVERY_CODE"
+  ],
+  "expiresIn": 300
+}
+```
+
+这里最重要的一点是：
+
+> **密码验证成功之后，不能先发正式 Access Token 或 Refresh Token。**
+
+否则 MFA 很可能被绕过。
+
+客户端（App / Web）需要处理 `MFA_REQUIRED` 状态：进入“输入验证码”页面，而不是直接当作登录成功。
+
+---
+
+## 十二、MFA Challenge 是什么？
+
+可以把它理解成：
+
+> “密码已经验证成功，但第二因素还没有验证完成”的临时登录状态。
+
+可以保存在 Redis：
+
+```text
+mfa:challenge:{challengeId}
+```
+
+例如：
+
+```json
+{
+  "userId": "user_xxx",
+  "purpose": "LOGIN",
+  "passwordVerified": true,
+  "attempts": 0,
+  "expiresAt": 1723000300,
+  "deviceId": "device_xxx"
+}
+```
+
+推荐有效期：
+
+```text
+5 分钟
+```
+
+Challenge 必须满足：
+
+- 随机、不可猜测
+- 短时间有效
+- 只能使用一次
+- 绑定 userId
+- 有失败次数限制
+- 验证成功后立即销毁
+
+`purpose` 字段很有用，它区分：
+
+```text
+LOGIN             登录
+STEP_UP           敏感操作（见“第三十节”）
+PASSWORD_RESET    密码重置后重新认证
+```
+
+同一套 Challenge 机制可以复用在多个场景，避免为每种场景各写一套。
+
+---
+
+## 十三、第二阶段登录：验证 TOTP
+
+前端提交：
+
+```http
+POST /api/v1/auth/mfa/totp/verify
+```
+
+Request：
+
+```json
+{
+  "mfaChallenge": "mfac_018fa72d",
+  "code": "123456"
+}
+```
+
+后端流程：
+
+```text
+读取 Challenge
+      ↓
+检查是否过期
+      ↓
+获取用户 TOTP Factor
+      ↓
+解密 Secret
+      ↓
+验证验证码
+      ↓
+检查是否重复使用
+      ↓
+Consume Challenge
+      ↓
+签发 Access Token
++
+Refresh Token
+```
+
+两个容易踩的坑：
+
+- **Challenge 与 Factor 必须一致**：Challenge 绑定 userId，不能拿 A 的 Challenge 去验证 B 的验证码；
+- **Token 里要记录这次登录经过了 MFA**（`amr`，见“第二十九节”），否则下游无法区分“仅密码”与“密码 + MFA”。
+
+---
+
+## 十四、为什么需要允许 ±1 时间窗口？
+
+标准 TOTP 一般每：
+
+```text
+30 秒
+```
+
+变化一次。
+
+验证码本质上基于：
+
+```text
+floor(unixTimestamp / 30)
+```
+
+但是用户手机和服务器的时间可能存在轻微误差。
+
+因此一般可以验证：
+
+```text
+currentStep - 1
+currentStep
+currentStep + 1
+```
+
+也就是：
+
+```text
+[-1, 0, +1]
+```
+
+这样可以容忍几十秒左右的时间误差。
+
+但不要随便扩大成：
+
+```text
+[-5, +5]
+```
+
+因为时间窗口越大，同时有效的验证码就越多，暴力破解空间也越大。
+
+---
+
+## 十五、一个很容易被忽略的问题：TOTP Replay
+
+假设：
+
+```text
+12:00:00
+```
+
+Authenticator 生成：
+
+```text
+123456
+```
+
+验证码可能一直到接近：
+
+```text
+12:00:30
+```
+
+才失效。
+
+如果用户在：
+
+```text
+12:00:05
+```
+
+已经使用过：
+
+```text
+123456
+```
+
+那么攻击者在：
+
+```text
+12:00:10
+```
+
+再次提交这个验证码怎么办？
+
+如果服务器只验证：
+
+```text
+验证码是否符合当前时间
+```
+
+那么第二次可能仍然会通过。
+
+因此应该在数据库中记录：
+
+```text
+lastAcceptedStep
+```
+
+如果：
+
+```text
+matchedStep <= lastAcceptedStep
+```
+
+则直接拒绝：
+
+```text
+CODE_ALREADY_USED
+```
+
+---
+
+## 十六、还要防止并发 Replay
+
+简单代码：
+
+```text
+if step > lastStep:
+    update(lastStep)
+```
+
+并不够。
+
+因为两个请求可能同时读取到旧值：
+
+```text
+Request A → lastStep = 100
+Request B → lastStep = 100
+```
+
+然后两个都认为：
+
+```text
+101 > 100
+```
+
+于是两个请求全部成功。
+
+正确做法应该使用数据库原子更新：
+
+```sql
+UPDATE mfa_totp_factor
+SET last_accepted_step = :step
+WHERE id = :factor_id
+AND (
+    last_accepted_step IS NULL
+    OR last_accepted_step < :step
+);
+```
+
+检查 affected rows：
+
+```text
+1 → 接受
+
+0 → 已使用
+```
+
+这样即使同时发送十个相同 OTP，也应该只有一个请求成功。
+
+> 如果团队用 Redis 做主存储，也可以借助 `SETNX` / Lua 脚本做原子判断；但数据库的原子 UPDATE 是最终兜底，两者可以结合使用。
+
+---
+
+# 第四部分：Secret 安全与暴力防护
+
+## 十七、TOTP Secret 怎么存？
+
+这里和密码完全不同。
+
+密码可以：
+
+```text
+Password
+↓
+Argon2 Hash
+↓
+Database
+```
+
+因为以后只需要判断：
+
+```text
+password 是否正确
+```
+
+不需要取回密码原文。
+
+但是 TOTP 每次验证时服务器必须：
+
+```text
+Secret
++
+Current Time
+↓
+计算验证码
+```
+
+因此服务器必须能够恢复 Secret。
+
+所以不能只：
+
+```text
+Hash Secret
+```
+
+而应该：
+
+```text
+Encrypt Secret
+```
+
+例如：
+
+```text
+TOTP Secret
+    ↓
+AES-256-GCM
+    ↓
+Ciphertext
+    ↓
+Database
+```
+
+Encryption Key 则放在：
+
+```text
+AWS KMS
+
+Google Cloud KMS
+
+Azure Key Vault
+
+HSM
+```
+
+而不是数据库里。
+
+### 推荐：KMS 信封加密
+
+生产环境更推荐“信封加密”（Envelope Encryption）：
+
+```text
+KMS 主密钥（KEK）
+   │ 加密
+   ▼
+数据密钥（DEK，随机生成）
+   │ 加密
+   ▼
+TOTP Secret
+```
+
+数据库里保存：
+
+```text
+DEK 密文
+Nonce
+加密算法标识
+encryption_key_id
+```
+
+验证时：
+
+```text
+读取密文
+  ↓
+用 key_id 对应的 KEK 解密出 DEK
+  ↓
+用 DEK 解密出 Secret
+  ↓
+只在内存中参与 TOTP 计算
+  ↓
+用完即弃
+```
+
+这样即使数据库被拖走，攻击者也拿不到 Secret；KMS 密钥可以独立轮换，需要换密钥时只需要用新 KEK 重新加密 DEK，不需要重写所有用户数据。
+
+---
+
+## 十八、Secret 绝对不能出现在日志里
+
+至少需要过滤以下字段：
+
+```text
+password
+otp
+code
+totp
+secret
+manualKey
+otpauthUri
+recoveryCode
+```
+
+禁止进入：
+
+```text
+Application Log
+Nginx Log
+Sentry
+Datadog
+New Relic
+Crashlytics
+Firebase Analytics
+Mixpanel
+Amplitude
+```
+
+尤其很多 APM 默认会采集：
+
+```text
+Request Body
+Response Body
+```
+
+这一点需要单独检查。
+
+正确日志：
+
+```text
+TOTP verification failed
+userId=user_xxx
+challengeId=xxx
+```
+
+错误日志：
+
+```text
+TOTP verification failed
+code=123456
+secret=ABCDEFG
+```
+
+> 建议在网关 / 中间件层面统一做字段脱敏（Redaction），而不是依赖每个开发者“记得不打印”；`Authorization` 头同样要过滤。
+
+---
+
+## 十九、为什么必须限流？
+
+6 位验证码只有：
+
+```text
+000000
+～
+999999
+```
+
+大约一百万种组合。
+
+因此 TOTP Verification API 必须限流。
+
+建议至少做三层：
+
+```text
+Challenge
++
+Account
++
+IP
+```
+
+例如一个 Challenge：
+
+```text
+最多允许 5 次失败
+```
+
+超过之后直接作废：
+
+```text
+MFA_CHALLENGE_ATTEMPTS_EXCEEDED
+```
+
+用户必须重新完成密码验证。
+
+同时还要有账号级计数。
+
+不能因为攻击者重新创建一个 Challenge，就把失败次数重新归零。
+
+否则就会出现：
+
+```text
+创建 Challenge
+→ 猜 5 次
+
+创建新 Challenge
+→ 再猜 5 次
+
+创建新 Challenge
+→ 再猜 5 次
+```
+
+等价于没有真正限流。
+
+一个可参考的初始阈值（按业务调整）：
+
+```text
+Challenge 级    5 次失败
+Account 级      10 次失败 / 小时
+IP 级           100 次失败 / 小时
+```
+
+超限后返回：
+
+```text
+RATE_LIMITED
+```
+
+并可考虑指数退避，让客户端等待一段时间再重试。
+
+---
+
+# 第五部分：账号恢复与关闭 2FA
+
+## 二十、Recovery Code 是必须的
+
+用户一定会遇到：
+
+```text
+手机丢了
+
+Authenticator 被卸载
+
+换手机时忘记迁移
+
+手机坏了
+```
+
+所以生产系统应该提供 Recovery Code。
+
+用户开启 MFA 后可以生成：
+
+```text
+8～10 个
+```
+
+一次性恢复码。
+
+例如：
+
+```text
+W73Q-MG2K-NP8X
+D92M-KH7R-WX4Q
+K61Y-PL9D-FA7T
+```
+
+用户只能看到明文一次。
+
+数据库保存：
+
+```text
+Recovery Code Hash
+```
+
+而不是明文。
+
+成功使用后：
+
+```text
+usedAt = 当前时间
+```
+
+永久失效。
+
+### 设计要点
+
+- **格式**：建议 4 位一组、中间用连字符（如 `W73Q-MG2K-NP8X`），每组只含不易混淆的字符，方便朗读和输入；
+- **哈希**：恢复码数量少（8～10 个）、但价值高，建议用 `bcrypt` / `Argon2id` 这类慢哈希，而不是裸 `SHA256`（防止拖库后被离线爆破）；
+- **只展示一次**：生成后只在“成功开启 / 重新生成”那一刻明文展示，之后页面只能看到“已生成 N 个、剩余 M 个”；
+- **重新生成**：点击“重新生成”会作废旧码、生成新码，旧码立即失效（同样需要先重新认证）；
+- **使用与审计**：每次使用、每次重新生成都要写安全审计日志，并通知用户。
+
+---
+
+## 二十一、不要把“忘记 2FA”设计成邮件一键关闭
+
+这是另一个常见问题。
+
+错误流程：
+
+```text
+Forgot 2FA
+    ↓
+发邮件
+    ↓
+点击链接
+    ↓
+2FA Disabled
+```
+
+这样意味着：
+
+> 攻破邮箱，就可以绕过 MFA。
+
+恢复流程应该根据业务风险设计。
+
+普通用户可以考虑：
+
+```text
+Email Ownership
++
+Password
++
+Device History
++
+Risk Check
+```
+
+高价值用户或者创作者账号可以增加：
+
+```text
+人工审核
+Identity Verification
+Security Cooldown
+```
+
+例如 MFA Reset 后等待：
+
+```text
+12～24 小时
+```
+
+再允许高风险账号操作。
+
+---
+
+## 二十二、关闭 2FA 也必须重新认证
+
+用户点击：
+
+```text
+Disable Two-Factor Authentication
+```
+
+不能只凭当前 Session 直接关闭。
+
+推荐：
+
+```text
+Password
++
+Current TOTP
+```
+
+然后：
+
+```http
+POST /api/v1/security/mfa/totp/disable
+```
+
+Request：
+
+```json
+{
+  "password": "********",
+  "code": "123456"
+}
+```
+
+成功后：
+
+```text
+TOTP Factor → REVOKED
+
+Recovery Codes → REVOKED
+
+Pending Challenge → 清理
+
+Security Audit → 写入
+
+Security Notification → 发送
+```
+
+---
+
+## 二十三、更换 Authenticator 的正确姿势
+
+不要这样：
+
+```text
+删除旧 Authenticator
+      ↓
+创建新的
+```
+
+因为如果创建新 Authenticator 失败，用户会失去两个因素。
+
+正确流程：
+
+```text
+验证密码
+    ↓
+验证旧 TOTP
+    ↓
+生成新 Secret
+    ↓
+New Factor = PENDING
+    ↓
+用户扫描
+    ↓
+验证新 TOTP
+    ↓
+New Factor = ACTIVE
+    ↓
+Old Factor = REVOKED
+```
+
+这样即使中途退出，旧的 Authenticator 仍然可用。
+
+> 另外提醒：不建议提供“导出 Secret”功能（把明文 Secret 交给用户自行迁移）。一旦支持导出，Secret 就等于可被复制，泄露面明显变大；即使要做，也必须经过重新认证 + 审计，并明确告知风险。
+
+---
+
+## 二十四、密码重置不能自动关闭 MFA
+
+这个规则也非常重要。
+
+正确流程：
+
+```text
+Forgot Password
+      ↓
+Reset Password
+      ↓
+密码修改成功
+      ↓
+TOTP 仍然开启
+```
+
+否则系统实际上变成：
+
+```text
+攻破邮箱
+    ↓
+Password Reset
+    ↓
+绕过 MFA
+```
+
+那 2FA 的意义就会被大幅削弱。
+
+另外两点建议：
+
+- 密码修改成功后，应**撤销该用户的 Refresh Token / 活跃 Session**，并把未完成的 MFA Challenge 一并作废；
+- 如果用户**主动**修改密码（已知当前密码），可以要求同时输入 TOTP，作为高敏感操作处理。
+
+---
+
+# 第六部分：多入口、数据模型与 API
+
+## 二十五、Google / Apple 登录怎么办？
+
+社交 App 很常见：
+
+```text
+Sign in with Apple
+
+Sign in with Google
+```
+
+如果一个用户已经开启本平台 TOTP，那么最简单、行为最一致的方案是：
+
+```text
+Google / Apple Authentication
+          ↓
+Primary Authentication Success
+          ↓
+Account MFA Enabled?
+          ↓
+         Yes
+          ↓
+      TOTP Challenge
+```
+
+也就是说：
+
+> 登录入口不同，但账号级 MFA 策略保持一致。
+
+要特别检查：
+
+- Password Login
+- Google Login
+- Apple Login
+- Legacy API
+- Web Login
+- Mobile Login
+
+不要其中一个入口要求 MFA，另一个入口却直接签发 Token。
+
+> 实现上建议把“MFA 是否必须”收敛到**一个统一的决策点**（例如“主认证成功 → 查账号 MFA 状态 → 需要则下发 Challenge”），而不是在每个登录入口里各写一遍判断，否则很容易漏掉某个入口。
+
+---
+
+## 二十六、建议的数据模型
+
+不要简单给 users 表增加：
+
+```text
+totp_secret
+```
+
+更推荐独立 Factor 表。
+
+例如：
+
+```sql
+CREATE TABLE mfa_totp_factor (
+    id UUID PRIMARY KEY,
+
+    user_id UUID NOT NULL,
+
+    status VARCHAR(20) NOT NULL,
+
+    secret_ciphertext BYTEA NOT NULL,
+
+    secret_nonce BYTEA,
+
+    encryption_key_id VARCHAR(128),
+
+    algorithm VARCHAR(16)
+        NOT NULL DEFAULT 'SHA1',
+
+    digits SMALLINT
+        NOT NULL DEFAULT 6,
+
+    period_seconds SMALLINT
+        NOT NULL DEFAULT 30,
+
+    last_accepted_step BIGINT,
+
+    pending_expires_at TIMESTAMPTZ,
+
+    confirmed_at TIMESTAMPTZ,
+
+    revoked_at TIMESTAMPTZ,
+
+    created_at TIMESTAMPTZ
+        NOT NULL DEFAULT NOW(),
+
+    updated_at TIMESTAMPTZ
+        NOT NULL DEFAULT NOW()
+);
+```
+
+Factor 状态：
+
+```text
+PENDING
+ACTIVE
+REVOKED
+```
+
+设计要点：
+
+- `user_id` 建索引；同一用户同一时刻最多一个 `ACTIVE` Factor（用唯一约束或应用层保证）；
+- `last_accepted_step` 只属于当前 Factor，更换 Authenticator 后新 Factor 从空开始；
+- `encryption_key_id` 记录用的是哪把 KMS 密钥，支持密钥轮换；
+- 这样未来要增加：
+
+```text
+Passkey
+Security Key
+Push MFA
+```
+
+也更容易扩展。
+
+---
+
+## 二十七、Recovery Code 表
+
+可以设计成：
+
+```sql
+CREATE TABLE mfa_recovery_code (
+    id UUID PRIMARY KEY,
+
+    user_id UUID NOT NULL,
+
+    factor_id UUID NOT NULL,
+
+    code_hash VARCHAR(255) NOT NULL,
+
+    used_at TIMESTAMPTZ,
+
+    revoked_at TIMESTAMPTZ,
+
+    created_at TIMESTAMPTZ
+        NOT NULL DEFAULT NOW()
+);
+```
+
+设计要点：
+
+- `(user_id, factor_id)` 建索引，便于按 Factor 批量作废（关闭 2FA / 更换 Authenticator 时）；
+- `code_hash` 存慢哈希，**明文不要进入数据库**；
+- 一次只允许一个“未用完”的恢复码批次，重新生成前先作废旧的。
+
+---
+
+## 二十八、API 可以怎么设计？
+
+一套比较清晰的接口：
+
+```text
+POST /api/v1/security/mfa/totp/enroll
+
+POST /api/v1/security/mfa/totp/enroll/confirm
+
+GET  /api/v1/security/mfa
+
+POST /api/v1/auth/login
+
+POST /api/v1/auth/mfa/totp/verify
+
+POST /api/v1/auth/mfa/recovery/verify
+
+POST /api/v1/security/mfa/totp/disable
+
+POST /api/v1/security/mfa/totp/replace/start
+
+POST /api/v1/security/mfa/totp/replace/confirm
+
+POST /api/v1/security/mfa/recovery/regenerate
+```
+
+可以配合统一 Error Code：
+
+```text
+MFA_REQUIRED
+
+MFA_CHALLENGE_INVALID
+MFA_CHALLENGE_EXPIRED
+MFA_CHALLENGE_ATTEMPTS_EXCEEDED
+
+TOTP_INVALID
+TOTP_ALREADY_USED
+
+MFA_ENROLLMENT_EXPIRED
+
+RECOVERY_CODE_INVALID
+RECOVERY_CODE_ALREADY_USED
+
+RATE_LIMITED
+
+REAUTHENTICATION_REQUIRED
+```
+
+> 所有 `security/mfa/*` 写操作都应要求重新认证（密码 或 密码 + TOTP），并且都写安全审计日志。
+
+---
+
+# 第七部分：工程实践与上线
+
+## 二十九、Token 最好记录认证方式
+
+如果系统使用 JWT，可以增加：
+
+```json
+{
+  "sub": "user_123",
+  "amr": [
+    "pwd",
+    "otp"
+  ]
+}
+```
+
+其中 `amr` 表示：
+
+```text
+Authentication Methods References
+```
+
+如果只完成密码：
+
+```json
+{
+  "amr": ["pwd"]
+}
+```
+
+完成 TOTP：
+
+```json
+{
+  "amr": ["pwd", "otp"]
+}
+```
+
+这样后续高风险接口就可以知道：
+
+> 当前 Session 到底有没有真正完成 MFA。
+
+> 建议把 `amr` 同时写进 Access Token 和 Refresh Token；刷新 Token 时保留原始认证方法，不要“升级”或“降级”。
+
+---
+
+## 三十、社交 App 特别适合使用 Step-Up Authentication
+
+用户即使已经登录，也不代表所有操作都应该直接允许。
+
+以下操作可以要求用户重新验证一次 TOTP：
+
+```text
+修改密码
+
+修改 Email
+
+修改手机号
+
+关闭 2FA
+
+重新生成 Recovery Code
+
+删除账号
+
+导出隐私数据
+
+修改支付信息
+
+修改创作者收款账户
+
+管理员操作
+```
+
+可以要求：
+
+```text
+最近 5～15 分钟
+```
+
+内完成过 MFA。
+
+这就是：
+
+```text
+Step-Up Authentication
+```
+
+对于社交产品尤其有价值。
+
+> 实现上可以直接复用“第十二节”的 Challenge 机制：`purpose = STEP_UP`，验证通过后在该 Session 上打一个“近期已通过 MFA”的时间戳，敏感接口检查该时间戳即可。
+
+---
+
+## 三十一、需要哪些第三方包？
+
+其实不多。
+
+### Node.js
+
+可以使用：
+
+```bash
+npm install otplib
+```
+
+二维码：
+
+```bash
+npm install qrcode
+```
+
+Secret 加密直接可以使用：
+
+```text
+Node crypto
+```
+
+### Java / Spring Boot
+
+可以考虑：
+
+```text
+java-totp
+```
+
+或者：
+
+```text
+java-otp
+```
+
+二维码可以用：
+
+```text
+ZXing
+```
+
+Spring Security 继续负责原来的认证体系。
+
+TOTP Library 只负责 OTP 算法。
+
+### Python
+
+可以使用：
+
+```bash
+pip install pyotp qrcode
+```
+
+### Go
+
+可以使用：
+
+```text
+github.com/pquerna/otp/totp
+```
+
+### .NET
+
+可以使用：
+
+```text
+Otp.NET
+QRCoder
+```
+
+> 选库原则：优先选择**维护活跃、API 稳定**的成熟库（如 `otplib`、`pyotp`、`pquerna/otp`），不要让团队自己实现 TOTP 算法或自己造加密轮子。
+
+---
+
+## 三十二、前端需要的包反而更简单
+
+Flutter 可以使用：
+
+```text
+qr_flutter
+```
+
+React Native：
+
+```text
+react-native-qrcode-svg
+```
+
+实际上，如果二维码由后端直接返回 PNG：
+
+> 移动端甚至不需要 TOTP 相关 SDK。
+
+只需要：
+
+```text
+二维码展示
++
+6 位输入框
++
+API 调用
+```
+
+即可。
+
+---
+
+## 三十三、服务端时间非常重要
+
+TOTP 是：
+
+```text
+Time-based
+```
+
+因此所有 Auth Server 都必须保持准确时间。
+
+生产环境应该开启：
+
+```text
+NTP
+```
+
+（例如 `chrony` / `systemd-timesyncd`）
+
+如果有：
+
+```text
+Auth Node A
+Auth Node B
+Auth Node C
+```
+
+三台服务器时间差几十秒，就可能出现：
+
+```text
+同一个验证码
+
+Node A → Success
+
+Node B → Failed
+```
+
+这种非常难排查的问题。
+
+建议：
+
+- 服务器统一使用 UTC 处理时间逻辑；
+- 监控各节点与 NTP 的时钟偏移，异常时告警；
+- 如果极少数用户长期校验失败，可以在 App 里提示“请校准设备时间”。
+
+---
+
+## 三十四、上线前最值得测试的几个场景
+
+除了正常登录，至少要覆盖以下测试。
+
+### 1. OTP Replay
+
+```text
+同一个验证码提交两次
+```
+
+结果应该：
+
+```text
+第一次成功
+第二次失败
+```
+
+### 2. 并发 Replay
+
+同时提交：
+
+```text
+10 个完全相同的验证码请求
+```
+
+结果：
+
+```text
+只能有一个成功
+```
+
+### 3. Challenge Replay
+
+登录完成之后重复提交相同：
+
+```text
+mfaChallenge
+```
+
+必须失败。
+
+### 4. Recovery Code Replay
+
+一个恢复码：
+
+```text
+第一次成功
+第二次失败
+```
+
+### 5. Password Reset
+
+修改密码后：
+
+```text
+MFA 仍然开启
+```
+
+### 6. OAuth Login
+
+使用 Google / Apple 登录后：
+
+```text
+MFA 仍然需要执行
+```
+
+### 7. Legacy API
+
+检查旧版本 API：
+
+```text
+不能绕过 MFA
+```
+
+### 8. Enroll 过期与失败
+
+- PENDING 超过有效期后，confirm 应返回 `MFA_ENROLLMENT_EXPIRED`；
+- confirm 连续错几次应触发限流。
+
+### 9. 关闭 / 更换 / Step-Up
+
+- 关闭 2FA 必须重新认证（密码 + TOTP）；
+- 更换 Authenticator 中途退出，旧 Factor 仍然可用；
+- 敏感接口在“近期未做 MFA”时应要求 Step-Up。
+
+> 建议把这些场景写成自动化集成测试，纳入 CI，防止后续改动把防重放或限流改坏。
+
+---
+
+## 三十五、一个最小可上线版本应该包含什么？
+
+如果第一版暂时不想做得特别复杂，至少要实现：
+
+```text
+TOTP Secret Generation
+
+QR / Manual Key
+
+Enrollment Confirmation
+
+Login MFA Challenge
+
+TOTP Verification
+
+Secret Encryption
+
+Rate Limit
+
+TOTP Replay Protection
+
+Recovery Code
+
+Disable MFA
+
+Security Audit
+
+Security Notification
+```
+
+有几个功能看起来像“增强能力”，实际上最好不要删：
+
+```text
+Secret Encryption
+
+Rate Limit
+
+Recovery Code
+
+MFA Challenge
+```
+
+如果缺少这些东西，系统可能只是：
+
+> “可以跑起来的验证码功能”
+
+而不是：
+
+> “生产环境可用的 MFA 系统”。
+
+---
+
+## 三十六、最终推荐方案
+
+对于一个已有前端和后端的社交 App，我会选择下面这套方案：
+
+```text
+Authenticator:
+Standard RFC 6238 TOTP
+
+Parameters:
+SHA1
+6 digits
+30 seconds
+160-bit Secret
+Base32
+±1 Time Window
+```
+
+后端：
+
+```text
+Existing Auth Framework
++
+TOTP Library
++
+PostgreSQL / MySQL
++
+Redis
++
+AES-GCM / KMS
+```
+
+前端：
+
+```text
+QR Renderer
++
+Manual Key
++
+6-digit OTP Input
++
+Recovery Code UI
++
+Security Settings
+```
+
+登录链路：
+
+```text
+Password / Google / Apple
+          ↓
+Primary Authentication
+          ↓
+     MFA Enabled?
+       │      │
+      No     Yes
+       │      │
+       │      ▼
+       │ MFA Challenge
+       │      ↓
+       │    TOTP
+       │      ↓
+       │ Replay Check
+       │      ↓
+       └──────┤
+              ↓
+       Access Token
+       Refresh Token
+```
+
+---
+
+## 结语
+
+TOTP 本身其实并不复杂。
+
+调用一个成熟的库，就可以完成：
+
+```text
+Secret Generation
+
+TOTP Generation
+
+TOTP Verification
+```
+
+真正决定一个 2FA 系统是否安全的，是外围的认证设计：
+
+```text
+Secret 怎么保护
+
+登录状态怎么流转
+
+验证码怎么限流
+
+如何防止 Replay
+
+手机丢失怎么恢复
+
+MFA 如何关闭
+
+密码重置是否会绕过 MFA
+
+其他登录入口是否执行同样的策略
+```
+
+所以实现 Authenticator 2FA 时，最好不要把需求理解成：
+
+> “给登录页加一个 6 位验证码输入框。”
+
+更准确的说法应该是：
+
+> **给整个账号认证体系增加第二认证因素，并重新设计认证状态机和账号恢复机制。**
+
+如果这些基础设计做好了，后续从 TOTP 再升级到：
+
+```text
+Passkey
+WebAuthn
+Hardware Security Key
+```
+
+也会容易很多。
+
+---
+
+## 参考资料
+
+- [RFC 6238 — TOTP: Time-Based One-Time Password Algorithm](https://datatracker.ietf.org/doc/html/rfc6238)
+- [RFC 4226 — HOTP: HMAC-Based One-Time Password Algorithm](https://datatracker.ietf.org/doc/html/rfc4226)
+- [OWASP Multifactor Authentication Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Multifactor_Authentication_Cheat_Sheet.html)
+- [NIST SP 800-63B — Digital Identity Guidelines](https://pages.nist.gov/800-63-3/sp800-63b.html)
+- [Google Authenticator Key URI Format](https://github.com/google/google-authenticator/wiki/Key-Uri-Format)
+- [otplib（Node.js TOTP / HOTP 库）](https://github.com/yeojz/otplib)
+- [pyotp（Python TOTP / HOTP 库）](https://pyauth.github.io/pyotp/)
+- [pquerna/otp（Go TOTP / HOTP 库）](https://github.com/pquerna/otp)
+- [zxing（Java 二维码生成 / 解析库）](https://github.com/zxing/zxing)
