@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "OpenClaw 安装、配置与 Telegram Bot 接入教程：从 VPS 部署到安全加固"
+title: "OpenClaw 安装、配置与 Telegram Bot 接入教程"
 date: 2026-05-01 13:00:00 +0800
 categories: [AI]
 tags: [OpenClaw, Telegram Bot, vps, Gateway, Security]
