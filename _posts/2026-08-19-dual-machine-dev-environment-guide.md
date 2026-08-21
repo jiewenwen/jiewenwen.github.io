@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "双机开发环境搭建指南：Mac mini 负责 Apple 开发，13900K + RTX 4090 成为开发计算节点"
+title: "双机开发环境搭建指南：Mac mini 负责 Apple 开发，Ubuntu 服务器成为开发计算节点"
 date: 2026-08-19 00:00:00 +0800
 categories: [Development]
 tags: [Codex, VS Code, Remote-SSH, Docker, Mac mini, Ubuntu, iOS, 双机开发, 开发环境]
