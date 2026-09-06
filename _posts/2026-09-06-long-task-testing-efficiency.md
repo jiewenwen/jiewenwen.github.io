@@ -22,7 +22,7 @@ tags: [回归测试, 长任务, 测试提效, CI/CD, 多仓库, 工程实践, �
 
 全文按“为什么慢 → 如何组织执行 → 如何判断失效 → 如何恢复与落地”展开：第 1~2 节讲问题与墙钟排序；第 3 节给出四层执行模型；第 4~7 节讲证据化与失效判断；第 8~10 节讲失败恢复与日常执行顺序；第 11 节总结适用边界。附录 A / B / C 分别提供落地 Checklist、可优先自动化的能力与术语速览；正文中的 stage、attempt、sealed、verifier、join 等英文术语可随时到「附录 C」对照。
 
-该附件可以直接放入你工程目录以供codex参考实施：[长任务测试提效：Codex 技术参考规范](/assets/downloads/long_task_testing_codex_reference.md)
+该附件可以直接放入你工程目录以供codex参考实施：[长任务测试提效：Codex 技术参考规范](/assets/downloads/long_task_testing_codex_reference.md).
 
 ## 1. 问题不是“测试太多”，而是关键路径被浪费
 
