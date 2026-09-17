@@ -8,24 +8,9 @@ tags: [sing-box, vless, reality, HAProxy, Nginx, SNI, TCP 443, 端口复用, Let
 
 只有一台 VPS、一个公网 IP，却要同时运行 sing-box 的 `VLESS + Vision + Reality` 和多个 Web/API App，又不想让任何客户端改端口——这是一道很典型的“单端口复用”题。本文给出一套按顺序可直接落地的方案：**Reality 客户端继续连接公网 `IP:443`，每个 App 继续使用标准 `https://域名`，而公网 TCP 443 只由 HAProxy 独占，再按外层可见的 SNI 分流给 Nginx 或 sing-box。**
 
-> **适用系统**：Debian / Ubuntu 系 Linux VPS（systemd）  
-> **核心组件**：HAProxy（L4/SNI 分流）+ Nginx（Web TLS 终止与多 App 反代）+ sing-box（VLESS + Vision + Reality）  
-> **前提假设**：已有一套工作正常的 Reality 服务端与客户端（例如《{% post_url 2025-11-29-sing-box-vless-reality %}》中的配置）；本文只改造入口，不修改 UUID、密钥等任何客户端参数。
-
-全文按实施顺序展开，共十二个部分：
-
-1. 结论与关键原理（第 1 ~ 5 节）
-2. 部署前体检（第 6 ~ 13 节）
-3. 入口组件与 Web 证书（第 14 ~ 17 节）
-4. Nginx 内部 HTTPS 与 App 反代（第 18 ~ 22 节）
-5. HAProxy SNI 分流（第 23 ~ 25 节）
-6. 迁移 sing-box 并正式切换 TCP 443（第 26 ~ 32 节）
-7. 完整验证（第 33 ~ 40 节）
-8. 证书自动续期（第 41 ~ 43 节）
-9. 新增 App、协议兼容、Docker 与 CDN（第 44 ~ 52 节）
-10. 安全加固（第 53 ~ 58 节）
-11. 故障排查与运行维护（第 59 ~ 72 节）
-12. 回滚、验收与速查（第 73 ~ 77 节）
+**适用系统**：Debian / Ubuntu 系 Linux VPS（systemd）
+**核心组件**：HAProxy（L4/SNI 分流）+ Nginx（Web TLS 终止与多 App 反代）+ sing-box（VLESS + Vision + Reality）
+**前提假设**：已有一套工作正常的 Reality 服务端与客户端（例如《{% post_url 2025-11-29-sing-box-vless-reality %}》中的配置）；本文只改造入口，不修改 UUID、密钥等任何客户端参数。
 
 ---
 
